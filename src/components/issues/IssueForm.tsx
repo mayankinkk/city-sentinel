@@ -144,7 +144,10 @@ export function IssueForm() {
       }
 
       await createIssue.mutateAsync({
-        ...data,
+        title: data.title,
+        description: data.description,
+        issue_type: data.issue_type,
+        priority: data.priority,
         latitude,
         longitude,
         address: address || undefined,
