@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { 
   MapPin, 
   FileText, 
@@ -63,6 +64,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
+                <NotificationBell />
                 <Link to="/report">
                   <Button variant="hero" size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />

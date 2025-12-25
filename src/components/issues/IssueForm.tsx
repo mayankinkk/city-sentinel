@@ -13,7 +13,8 @@ import { useCreateIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
 import { IssueType, IssuePriority, issueTypeLabels, issueTypeIcons, priorityLabels } from '@/types/issue';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Upload, Loader2, Navigation, AlertTriangle } from 'lucide-react';
+import { LocationPicker } from '@/components/map/LocationPicker';
+import { Upload, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const issueSchema = z.object({
@@ -61,13 +62,15 @@ export function IssueForm() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          setLatitude(position.coords.latitude);
-          setLongitude(position.coords.longitude);
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setLatitude(lat);
+          setLongitude(lng);
           
-          // Reverse geocoding using OpenStreetMap Nominatim
+          // Reverse geocoding
           try {
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
             );
             const data = await response.json();
             if (data.display_name) {
@@ -80,15 +83,29 @@ export function IssueForm() {
         },
         (error) => {
           console.error('Geolocation error:', error);
-          toast.error('Could not get your location. Please enable location services.');
+          toast.error('Could not get your location. Please select it on the map.');
+          // Set default location (Delhi, India)
+          setLatitude(28.6139);
+          setLongitude(77.209);
           setIsLocating(false);
         },
         { enableHighAccuracy: true }
       );
     } else {
       toast.error('Geolocation is not supported by your browser');
+      setLatitude(28.6139);
+      setLongitude(77.209);
       setIsLocating(false);
     }
+  };
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    setLatitude(lat);
+    setLongitude(lng);
+  };
+
+  const handleAddressChange = (newAddress: string) => {
+    setAddress(newAddress);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +148,7 @@ export function IssueForm() {
 
   const onSubmit = async (data: IssueFormData) => {
     if (!latitude || !longitude) {
-      toast.error('Location is required. Please enable location services.');
+      toast.error('Location is required. Please select it on the map.');
       return;
     }
 
@@ -177,29 +194,20 @@ export function IssueForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Location */}
+          {/* Location Picker Map */}
           <div className="space-y-2">
             <Label>Location</Label>
-            <div className="flex gap-2">
-              <div className="flex-1 p-3 rounded-lg border border-border bg-muted/50">
-                {isLocating ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Detecting location...
-                  </div>
-                ) : latitude && longitude ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-primary shrink-0" />
-                    <span className="truncate">{address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`}</span>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground text-sm">Location not available</span>
-                )}
-              </div>
-              <Button type="button" variant="outline" onClick={getLocation} disabled={isLocating}>
-                <Navigation className="h-4 w-4" />
-              </Button>
-            </div>
+            <LocationPicker
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={handleLocationChange}
+              onAddressChange={handleAddressChange}
+              isLocating={isLocating}
+              onLocate={getLocation}
+            />
+            {address && (
+              <p className="text-sm text-muted-foreground truncate">{address}</p>
+            )}
           </div>
 
           {/* Issue Type */}

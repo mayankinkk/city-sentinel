@@ -1,23 +1,27 @@
 import { Badge } from '@/components/ui/badge';
 import { IssueStatus, statusLabels } from '@/types/issue';
-import { Clock, Loader2, CheckCircle } from 'lucide-react';
+import { Clock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 interface StatusBadgeProps {
   status: IssueStatus;
 }
 
-const statusConfig = {
+const statusConfig: Record<IssueStatus, { variant: 'pending' | 'inProgress' | 'resolved' | 'secondary'; icon: any }> = {
   pending: {
-    variant: 'pending' as const,
+    variant: 'pending',
     icon: Clock,
   },
   in_progress: {
-    variant: 'inProgress' as const,
+    variant: 'inProgress',
     icon: Loader2,
   },
   resolved: {
-    variant: 'resolved' as const,
-    icon: CheckCircle,
+    variant: 'resolved',
+    icon: CheckCircle2,
+  },
+  withdrawn: {
+    variant: 'secondary',
+    icon: XCircle,
   },
 };
 

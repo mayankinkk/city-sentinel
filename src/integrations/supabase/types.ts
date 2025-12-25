@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invite_token: string
+          invited_by: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invite_token: string
+          invited_by: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invited_by?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       issues: {
         Row: {
           address: string | null
@@ -68,6 +101,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          issue_id: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          issue_id?: string | null
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          issue_id?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -102,7 +176,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       issue_priority: "low" | "medium" | "high"
-      issue_status: "pending" | "in_progress" | "resolved"
+      issue_status: "pending" | "in_progress" | "resolved" | "withdrawn"
       issue_type:
         | "pothole"
         | "streetlight"
@@ -242,7 +316,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       issue_priority: ["low", "medium", "high"],
-      issue_status: ["pending", "in_progress", "resolved"],
+      issue_status: ["pending", "in_progress", "resolved", "withdrawn"],
       issue_type: [
         "pothole",
         "streetlight",
