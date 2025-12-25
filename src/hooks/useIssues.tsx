@@ -114,11 +114,36 @@ export function useUpdateIssue() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateIssueData) => {
+      // Get current issue to track old status
+      const { data: currentIssue } = await supabase
+        .from('issues')
+        .select('status, reporter_id')
+        .eq('id', id)
+        .single();
+
+      const oldStatus = currentIssue?.status;
+
       const { error } = await supabase
         .from('issues')
         .update(data)
         .eq('id', id);
       if (error) throw error;
+
+      // Trigger notification if status changed and there's a reporter
+      if (data.status && oldStatus && data.status !== oldStatus && currentIssue?.reporter_id) {
+        try {
+          await supabase.functions.invoke('notify-status-change', {
+            body: {
+              issue_id: id,
+              old_status: oldStatus,
+              new_status: data.status,
+            },
+          });
+        } catch (notifError) {
+          console.error('Failed to send notification:', notifError);
+          // Don't fail the update if notification fails
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });

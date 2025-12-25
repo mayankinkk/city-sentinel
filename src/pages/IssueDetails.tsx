@@ -145,11 +145,36 @@ export default function IssueDetails() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Admin Actions */}
-            {canModify && (
+            {/* Reporter Actions - Withdraw */}
+            {isOwner && issue.status !== 'withdrawn' && issue.status !== 'resolved' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Actions</CardTitle>
+                  <CardTitle>Your Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => handleStatusChange('withdrawn')}
+                    disabled={updateIssue.isPending}
+                  >
+                    {updateIssue.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : null}
+                    Withdraw Issue
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Withdraw if the issue was resolved or reported in error.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Admin Actions */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Authority Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -172,21 +197,19 @@ export default function IssueDetails() {
                     </Select>
                   </div>
 
-                  {isAdmin && (
-                    <Button
-                      variant="destructive"
-                      className="w-full gap-2"
-                      onClick={handleDelete}
-                      disabled={deleteIssue.isPending}
-                    >
-                      {deleteIssue.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                      Delete Issue
-                    </Button>
-                  )}
+                  <Button
+                    variant="destructive"
+                    className="w-full gap-2"
+                    onClick={handleDelete}
+                    disabled={deleteIssue.isPending}
+                  >
+                    {deleteIssue.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Delete Issue
+                  </Button>
                 </CardContent>
               </Card>
             )}
