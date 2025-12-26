@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { Navbar } from "@/components/layout/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthorityAuth from "./pages/AuthorityAuth";
 import MapPage from "./pages/MapPage";
 import Issues from "./pages/Issues";
 import ReportIssue from "./pages/ReportIssue";
@@ -30,10 +31,11 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/authority" element={<AuthorityAuth />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/issues" element={<Issues />} />
                 <Route path="/report" element={<ReportIssue />} />
-                <Route path="/issue/:id" element={<IssueDetails />} />
+                <Route path="/issues/:id" element={<IssueDetails />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

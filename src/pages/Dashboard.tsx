@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useIssues } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
 import { StatsCard } from '@/components/dashboard/StatsCard';
+import { AdminInviteManager } from '@/components/admin/AdminInviteManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { issueTypeLabels, IssueType, IssueStatus } from '@/types/issue';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FileText, Clock, Loader2, CheckCircle, AlertTriangle, TrendingUp, MapPin } from 'lucide-react';
+import { FileText, Clock, Loader2, CheckCircle, AlertTriangle, TrendingUp, MapPin, Users } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 const STATUS_COLORS = {
@@ -80,13 +82,23 @@ export default function Dashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Overview of all reported issues and their status
+            Manage issues, invites, and view analytics
           </p>
         </div>
 
-        {/* Stats Grid */}
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="invites" className="gap-2">
+              <Users className="h-4 w-4" />
+              Admin Invites
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatsCard
             title="Total Issues"
@@ -175,50 +187,56 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Performance Metrics */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-primary/10">
-                  <TrendingUp className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Resolution Rate</p>
-                  <p className="text-2xl font-bold">{resolutionRate}%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Performance Metrics */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <TrendingUp className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Resolution Rate</p>
+                      <p className="text-2xl font-bold">{resolutionRate}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-accent/10">
-                  <Clock className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg. Resolution Time</p>
-                  <p className="text-2xl font-bold">{avgDays} days</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-accent/10">
+                      <Clock className="h-6 w-6 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Avg. Resolution Time</p>
+                      <p className="text-2xl font-bold">{avgDays} days</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-status-in-progress/10">
-                  <Loader2 className="h-6 w-6 text-status-in-progress" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold">{inProgressCount} issues</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-status-in-progress/10">
+                      <Loader2 className="h-6 w-6 text-status-in-progress" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">In Progress</p>
+                      <p className="text-2xl font-bold">{inProgressCount} issues</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="invites">
+            <AdminInviteManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );
