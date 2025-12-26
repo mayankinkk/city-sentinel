@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   MapPin, 
   FileText, 
@@ -62,6 +63,7 @@ export function Navbar() {
 
           {/* Auth & Report Button */}
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             {user ? (
               <>
                 <NotificationBell />

@@ -12,7 +12,7 @@ interface IssueCardProps {
 
 export function IssueCard({ issue }: IssueCardProps) {
   return (
-    <Link to={`/issue/${issue.id}`}>
+    <Link to={`/issues/${issue.id}`}>
       <Card className="group h-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1">
         {issue.image_url && (
           <div className="relative h-40 overflow-hidden">
