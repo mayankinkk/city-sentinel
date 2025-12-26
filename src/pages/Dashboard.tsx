@@ -4,11 +4,12 @@ import { useIssues } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { AdminInviteManager } from '@/components/admin/AdminInviteManager';
+import { BulkActionsManager } from '@/components/dashboard/BulkActionsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { issueTypeLabels, IssueType, IssueStatus } from '@/types/issue';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FileText, Clock, Loader2, CheckCircle, AlertTriangle, TrendingUp, MapPin, Users } from 'lucide-react';
+import { FileText, Clock, Loader2, CheckCircle, AlertTriangle, TrendingUp, MapPin, Users, Edit } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 const STATUS_COLORS = {
@@ -91,6 +92,10 @@ export default function Dashboard() {
         <Tabs defaultValue="analytics" className="space-y-6">
           <TabsList>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="bulk" className="gap-2">
+              <Edit className="h-4 w-4" />
+              Bulk Actions
+            </TabsTrigger>
             <TabsTrigger value="invites" className="gap-2">
               <Users className="h-4 w-4" />
               Admin Invites
@@ -231,6 +236,10 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="bulk">
+            <BulkActionsManager />
           </TabsContent>
 
           <TabsContent value="invites">
