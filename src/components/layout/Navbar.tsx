@@ -12,7 +12,8 @@ import {
   Plus,
   Menu,
   X,
-  Shield
+  Shield,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -79,6 +80,11 @@ export function Navbar() {
                     Admin
                   </div>
                 )}
+                <Link to="/profile">
+                  <Button variant="ghost" size="icon">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
                   <LogOut className="h-4 w-4" />
                   Sign Out

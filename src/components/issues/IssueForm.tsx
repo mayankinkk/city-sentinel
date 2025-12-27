@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { IssueType, IssuePriority, issueTypeLabels, issueTypeIcons, priorityLabels } from '@/types/issue';
 import { supabase } from '@/integrations/supabase/client';
 import { LocationPicker } from '@/components/map/LocationPicker';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,6 +39,7 @@ export function IssueForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const {
     register,
@@ -149,6 +151,11 @@ export function IssueForm() {
   const onSubmit = async (data: IssueFormData) => {
     if (!latitude || !longitude) {
       toast.error('Location is required. Please select it on the map.');
+      return;
+    }
+    
+    if (!termsAccepted) {
+      toast.error('Please accept the terms and conditions.');
       return;
     }
 
@@ -324,13 +331,25 @@ export function IssueForm() {
             </div>
           </div>
 
+          {/* Terms and Conditions */}
+          <div className="flex items-start gap-3 p-4 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="terms"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+            />
+            <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+              I agree to the Terms and Conditions. I confirm that the information provided is accurate and I understand that false reports may result in account suspension.
+            </Label>
+          </div>
+
           {/* Submit Button */}
           <Button
             type="submit"
             variant="hero"
             size="lg"
             className="w-full"
-            disabled={isSubmitting || isUploading || !latitude || !longitude}
+            disabled={isSubmitting || isUploading || !latitude || !longitude || !termsAccepted}
           >
             {(isSubmitting || isUploading) && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSubmitting || isUploading ? 'Submitting...' : 'Submit Report'}

@@ -14,6 +14,7 @@ import Issues from "./pages/Issues";
 import ReportIssue from "./pages/ReportIssue";
 import IssueDetails from "./pages/IssueDetails";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/report" element={<ReportIssue />} />
                 <Route path="/issues/:id" element={<IssueDetails />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
