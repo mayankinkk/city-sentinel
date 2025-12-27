@@ -228,14 +228,22 @@ export default function Auth() {
                   </div>
 
                   {activeTab === 'signin' && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="px-0 text-sm"
-                      onClick={() => setShowForgotPassword(true)}
-                    >
-                      Forgot your password?
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 text-sm"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        Forgot your password?
+                      </Button>
+                      <div className="text-sm text-muted-foreground">
+                        Are you an authority?{' '}
+                        <a href="/authority" className="text-primary hover:underline font-medium">
+                          Admin Login
+                        </a>
+                      </div>
+                    </div>
                   )}
 
                   <Button

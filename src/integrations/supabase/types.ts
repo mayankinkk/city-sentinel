@@ -47,10 +47,129 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      issue_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_admin_update: boolean
+          issue_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_admin_update?: boolean
+          issue_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_admin_update?: boolean
+          issue_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_follows: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_follows_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_upvotes: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_upvotes_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issues: {
         Row: {
           address: string | null
+          assigned_to: string | null
           created_at: string
+          department_id: string | null
           description: string
           id: string
           image_url: string | null
@@ -62,12 +181,15 @@ export type Database = {
           reporter_id: string | null
           resolved_at: string | null
           status: Database["public"]["Enums"]["issue_status"]
+          terms_accepted: boolean | null
           title: string
           updated_at: string
         }
         Insert: {
           address?: string | null
+          assigned_to?: string | null
           created_at?: string
+          department_id?: string | null
           description: string
           id?: string
           image_url?: string | null
@@ -79,12 +201,15 @@ export type Database = {
           reporter_id?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["issue_status"]
+          terms_accepted?: boolean | null
           title: string
           updated_at?: string
         }
         Update: {
           address?: string | null
+          assigned_to?: string | null
           created_at?: string
+          department_id?: string | null
           description?: string
           id?: string
           image_url?: string | null
@@ -96,10 +221,19 @@ export type Database = {
           reporter_id?: string | null
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["issue_status"]
+          terms_accepted?: boolean | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "issues_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -142,6 +276,48 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          notification_email: boolean
+          notification_push: boolean
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notification_email?: boolean
+          notification_push?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notification_email?: boolean
+          notification_push?: boolean
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -174,7 +350,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role:
+        | "admin"
+        | "user"
+        | "super_admin"
+        | "department_admin"
+        | "field_worker"
       issue_priority: "low" | "medium" | "high"
       issue_status: "pending" | "in_progress" | "resolved" | "withdrawn"
       issue_type:
@@ -314,7 +495,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: [
+        "admin",
+        "user",
+        "super_admin",
+        "department_admin",
+        "field_worker",
+      ],
       issue_priority: ["low", "medium", "high"],
       issue_status: ["pending", "in_progress", "resolved", "withdrawn"],
       issue_type: [
