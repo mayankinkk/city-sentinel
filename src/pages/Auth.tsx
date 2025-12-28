@@ -10,19 +10,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, Phone, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
 
-const authSchema = z.object({
+const signInSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+const signUpSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  full_name: z.string().min(2, 'Full name is required'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  address: z.string().min(5, 'Address is required'),
 });
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
-type AuthFormData = z.infer<typeof authSchema>;
+type SignInFormData = z.infer<typeof signInSchema>;
+type SignUpFormData = z.infer<typeof signUpSchema>;
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function Auth() {
@@ -32,21 +41,15 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState('signin');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<AuthFormData>({
-    resolver: zodResolver(authSchema),
+  const signInForm = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
   });
 
-  const {
-    register: registerForgot,
-    handleSubmit: handleSubmitForgot,
-    formState: { errors: errorsForgot },
-    reset: resetForgot,
-  } = useForm<ForgotPasswordFormData>({
+  const signUpForm = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+  });
+
+  const forgotPasswordForm = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
@@ -56,35 +59,76 @@ export default function Auth() {
     }
   }, [user, loading, navigate]);
 
-  const onSubmit = async (data: AuthFormData) => {
+  const onSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
     try {
-      if (activeTab === 'signin') {
-        const { error } = await signIn(data.email, data.password);
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast.error('Invalid email or password');
-          } else {
-            toast.error(error.message);
-          }
-          return;
+      const { error } = await signIn(data.email, data.password);
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password');
+        } else {
+          toast.error(error.message);
         }
-        toast.success('Welcome back!');
-        navigate('/');
-      } else {
-        const { error } = await signUp(data.email, data.password);
-        if (error) {
-          if (error.message.includes('User already registered')) {
-            toast.error('An account with this email already exists. Please sign in.');
-            setActiveTab('signin');
-          } else {
-            toast.error(error.message);
-          }
-          return;
-        }
-        toast.success('Account created successfully! You are now signed in.');
-        navigate('/');
+        return;
       }
+
+      // Check if user is an admin - if so, redirect to authority login
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (roleData) {
+          await supabase.auth.signOut();
+          toast.error('Authority accounts must sign in through the Authority Portal');
+          return;
+        }
+      }
+
+      toast.success('Welcome back!');
+      navigate('/');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSignUp = async (data: SignUpFormData) => {
+    setIsLoading(true);
+    try {
+      const { error } = await signUp(data.email, data.password);
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          toast.error('An account with this email already exists. Please sign in.');
+          setActiveTab('signin');
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
+
+      // Get the newly created user and create their profile
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            user_id: session.session.user.id,
+            full_name: data.full_name,
+            phone: data.phone,
+            address: data.address,
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+      }
+
+      toast.success('Account created successfully! You are now signed in.');
+      navigate('/');
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +146,7 @@ export default function Auth() {
       }
       toast.success('Password reset email sent! Check your inbox.');
       setShowForgotPassword(false);
-      resetForgot();
+      forgotPasswordForm.reset();
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +183,7 @@ export default function Auth() {
                   variant="ghost" 
                   size="sm" 
                   className="w-fit gap-2 -ml-2"
-                  onClick={() => { setShowForgotPassword(false); resetForgot(); }}
+                  onClick={() => { setShowForgotPassword(false); forgotPasswordForm.reset(); }}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Sign In
@@ -150,7 +194,7 @@ export default function Auth() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmitForgot(onForgotPassword)} className="space-y-4">
+                <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPassword)} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="forgot-email">Email</Label>
                     <div className="relative">
@@ -160,11 +204,11 @@ export default function Auth() {
                         type="email"
                         placeholder="name@example.com"
                         className="pl-10"
-                        {...registerForgot('email')}
+                        {...forgotPasswordForm.register('email')}
                       />
                     </div>
-                    {errorsForgot.email && (
-                      <p className="text-sm text-destructive">{errorsForgot.email.message}</p>
+                    {forgotPasswordForm.formState.errors.email && (
+                      <p className="text-sm text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>
                     )}
                   </div>
 
@@ -184,7 +228,7 @@ export default function Auth() {
           ) : (
             <>
               <CardHeader className="pb-4">
-                <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); reset(); }}>
+                <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); signInForm.reset(); signUpForm.reset(); }}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="signin">Sign In</TabsTrigger>
                     <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -192,42 +236,42 @@ export default function Auth() {
                 </Tabs>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="name@example.com"
-                        className="pl-10"
-                        {...register('email')}
-                      />
+                {activeTab === 'signin' ? (
+                  <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="name@example.com"
+                          className="pl-10"
+                          {...signInForm.register('email')}
+                        />
+                      </div>
+                      {signInForm.formState.errors.email && (
+                        <p className="text-sm text-destructive">{signInForm.formState.errors.email.message}</p>
+                      )}
                     </div>
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email.message}</p>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        {...register('password')}
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          className="pl-10"
+                          {...signInForm.register('password')}
+                        />
+                      </div>
+                      {signInForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">{signInForm.formState.errors.password.message}</p>
+                      )}
                     </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password.message}</p>
-                    )}
-                  </div>
 
-                  {activeTab === 'signin' && (
                     <div className="space-y-2">
                       <Button
                         type="button"
@@ -244,19 +288,117 @@ export default function Auth() {
                         </a>
                       </div>
                     </div>
-                  )}
 
-                  <Button
-                    type="submit"
-                    variant="hero"
-                    size="lg"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      variant="hero"
+                      size="lg"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Sign In
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name">Full Name *</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="full_name"
+                          type="text"
+                          placeholder="John Doe"
+                          className="pl-10"
+                          {...signUpForm.register('full_name')}
+                        />
+                      </div>
+                      {signUpForm.formState.errors.full_name && (
+                        <p className="text-sm text-destructive">{signUpForm.formState.errors.full_name.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email *</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="name@example.com"
+                          className="pl-10"
+                          {...signUpForm.register('email')}
+                        />
+                      </div>
+                      {signUpForm.formState.errors.email && (
+                        <p className="text-sm text-destructive">{signUpForm.formState.errors.email.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="+91 9876543210"
+                          className="pl-10"
+                          {...signUpForm.register('phone')}
+                        />
+                      </div>
+                      {signUpForm.formState.errors.phone && (
+                        <p className="text-sm text-destructive">{signUpForm.formState.errors.phone.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address *</Label>
+                      <div className="relative">
+                        <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="address"
+                          type="text"
+                          placeholder="123 Main St, City"
+                          className="pl-10"
+                          {...signUpForm.register('address')}
+                        />
+                      </div>
+                      {signUpForm.formState.errors.address && (
+                        <p className="text-sm text-destructive">{signUpForm.formState.errors.address.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password *</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          placeholder="••••••••"
+                          className="pl-10"
+                          {...signUpForm.register('password')}
+                        />
+                      </div>
+                      {signUpForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      variant="hero"
+                      size="lg"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Create Account
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </>
           )}
