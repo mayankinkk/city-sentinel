@@ -26,6 +26,9 @@ export interface Issue {
   image_url?: string;
   reporter_id?: string;
   reporter_email?: string;
+  department_id?: string;
+  assigned_to?: string;
+  terms_accepted?: boolean;
   created_at: string;
   updated_at: string;
   resolved_at?: string;

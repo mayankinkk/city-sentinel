@@ -106,11 +106,11 @@ export default function AuthorityAuth() {
           .select('role')
           .eq('user_id', authData.user.id)
           .eq('role', 'admin')
-          .single();
+          .maybeSingle();
 
         if (!roleData) {
           await supabase.auth.signOut();
-          toast.error('Access denied. This portal is for authorities only.');
+          toast.error('Access denied. This portal is for authorities only. Please use the regular login.');
           return;
         }
 
@@ -233,9 +233,17 @@ export default function AuthorityAuth() {
                 </Button>
 
                 {!inviteToken && (
-                  <p className="text-center text-sm text-muted-foreground mt-4">
-                    New authority? Contact an existing admin to receive an invite.
-                  </p>
+                  <div className="text-center space-y-2 mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      New authority? Contact an existing admin to receive an invite.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Not an authority?{' '}
+                      <a href="/auth" className="text-primary hover:underline font-medium">
+                        User Login
+                      </a>
+                    </p>
+                  </div>
                 )}
               </form>
             </CardContent>

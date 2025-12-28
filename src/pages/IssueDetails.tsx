@@ -3,6 +3,8 @@ import { useIssue, useUpdateIssue, useDeleteIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
 import { StatusBadge } from '@/components/issues/StatusBadge';
 import { PriorityBadge } from '@/components/issues/PriorityBadge';
+import { IssueActions } from '@/components/issues/IssueActions';
+import { CommentsSection } from '@/components/issues/CommentsSection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -141,10 +143,16 @@ export default function IssueDetails() {
                 </a>
               </CardContent>
             </Card>
+
+            {/* Comments Section */}
+            <CommentsSection issueId={issue.id} />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Upvote and Follow Actions */}
+            <IssueActions issueId={issue.id} />
+
             {/* Reporter Actions - Withdraw */}
             {isOwner && issue.status !== 'withdrawn' && issue.status !== 'resolved' && (
               <Card>
