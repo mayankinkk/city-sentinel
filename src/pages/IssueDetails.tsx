@@ -69,7 +69,7 @@ export default function IssueDetails() {
   return (
     <>
       <Helmet>
-        <title>{issue.title} - CityFix</title>
+        <title>{issue.title} - City Sentinel</title>
         <meta name="description" content={issue.description.substring(0, 160)} />
       </Helmet>
 

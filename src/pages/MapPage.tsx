@@ -25,7 +25,7 @@ export default function MapPage() {
   return (
     <>
       <Helmet>
-        <title>Issues Map - CityFix</title>
+        <title>Issues Map - City Sentinel</title>
         <meta name="description" content="View all reported city issues on an interactive map. See potholes, broken lights, and other infrastructure problems in your area." />
       </Helmet>
 

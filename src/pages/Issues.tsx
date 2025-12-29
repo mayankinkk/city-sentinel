@@ -56,7 +56,7 @@ export default function Issues() {
   return (
     <>
       <Helmet>
-        <title>All Issues - CityFix</title>
+        <title>All Issues - City Sentinel</title>
         <meta name="description" content="Browse all reported city infrastructure issues. Filter by status, priority, and type to find problems in your area." />
       </Helmet>
 

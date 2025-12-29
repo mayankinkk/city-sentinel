@@ -133,8 +133,8 @@ export default function AuthorityAuth() {
   return (
     <>
       <Helmet>
-        <title>Authority Portal - CityFix</title>
-        <meta name="description" content="Authority login portal for CityFix administrators" />
+        <title>Authority Portal - City Sentinel</title>
+        <meta name="description" content="Authority login portal for City Sentinel administrators" />
       </Helmet>
 
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
