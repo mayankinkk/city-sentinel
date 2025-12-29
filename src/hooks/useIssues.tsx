@@ -131,16 +131,16 @@ export function useUpdateIssue() {
 
       // Trigger notification if status changed and there's a reporter
       if (data.status && oldStatus && data.status !== oldStatus && currentIssue?.reporter_id) {
-        try {
-          await supabase.functions.invoke('notify-status-change', {
-            body: {
-              issue_id: id,
-              old_status: oldStatus,
-              new_status: data.status,
-            },
-          });
-        } catch (notifError) {
-          console.error('Failed to send notification:', notifError);
+        const { error: notifyError } = await supabase.functions.invoke('notify-status-change', {
+          body: {
+            issue_id: id,
+            old_status: oldStatus,
+            new_status: data.status,
+          },
+        });
+
+        if (notifyError) {
+          console.error('notify-status-change failed:', notifyError);
           // Don't fail the update if notification fails
         }
       }
