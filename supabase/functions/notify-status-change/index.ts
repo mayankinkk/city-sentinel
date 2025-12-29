@@ -97,18 +97,33 @@ const sendEmail = async (to: string, subject: string, html: string) => {
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("notify-status-change function called");
+  console.log("Request method:", req.method);
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    console.log("SUPABASE_URL exists:", !!supabaseUrl);
+    console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!supabaseKey);
 
-    const { issue_id, old_status, new_status }: NotifyStatusChangeRequest = await req.json();
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase environment variables");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const body = await req.text();
+    console.log("Request body:", body);
+    
+    const { issue_id, old_status, new_status }: NotifyStatusChangeRequest = JSON.parse(body);
     
     console.log(`Processing status change for issue ${issue_id}: ${old_status} -> ${new_status}`);
 
