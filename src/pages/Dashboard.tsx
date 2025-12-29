@@ -77,8 +77,8 @@ export default function Dashboard() {
   return (
     <>
       <Helmet>
-        <title>Admin Dashboard - CityFix</title>
-        <meta name="description" content="CityFix admin dashboard. View analytics, manage issues, and track resolution progress." />
+        <title>Admin Dashboard - City Sentinel</title>
+        <meta name="description" content="City Sentinel admin dashboard. View analytics, manage issues, and track resolution progress." />
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">

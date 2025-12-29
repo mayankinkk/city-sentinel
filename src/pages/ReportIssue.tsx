@@ -30,7 +30,7 @@ export default function ReportIssue() {
   return (
     <>
       <Helmet>
-        <title>Report Issue - CityFix</title>
+        <title>Report Issue - City Sentinel</title>
         <meta name="description" content="Report a city infrastructure problem. Help improve your neighborhood by reporting potholes, broken lights, and other issues." />
       </Helmet>
 

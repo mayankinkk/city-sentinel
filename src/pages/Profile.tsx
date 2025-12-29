@@ -73,8 +73,8 @@ export default function Profile() {
   return (
     <>
       <Helmet>
-        <title>My Profile - CityFix</title>
-        <meta name="description" content="Manage your CityFix profile, view your reported issues, and configure notification preferences." />
+        <title>My Profile - City Sentinel</title>
+        <meta name="description" content="Manage your City Sentinel profile, view your reported issues, and configure notification preferences." />
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">

@@ -19,7 +19,7 @@ export default function Index() {
   return (
     <>
       <Helmet>
-        <title>CityFix - Report & Track City Infrastructure Issues</title>
+        <title>City Sentinel - Report & Track City Infrastructure Issues</title>
         <meta name="description" content="Help improve your city by reporting potholes, broken streetlights, drainage issues and more. Track the status of reported problems in real-time." />
       </Helmet>
 
@@ -43,7 +43,7 @@ export default function Index() {
               </h1>
               
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                CityFix empowers citizens to report infrastructure problems and track their resolution. 
+                City Sentinel empowers citizens to report infrastructure problems and track their resolution. 
                 Together, we can make our neighborhoods safer and more livable.
               </p>
               
@@ -156,7 +156,7 @@ export default function Index() {
                   Ready to make a difference?
                 </h2>
                 <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  Join thousands of citizens who are actively improving their communities through CityFix.
+                  Join thousands of citizens who are actively improving their communities through City Sentinel.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <Link to="/map">

@@ -44,7 +44,7 @@ const generateEmailHtml = (issue: any, newStatus: string, newStatusLabel: string
 <body>
   <div class="container">
     <div class="header">
-      <h1 style="margin: 0; font-size: 24px;">🏙️ CityFix</h1>
+      <h1 style="margin: 0; font-size: 24px;">🏙️ City Sentinel</h1>
       <p style="margin: 10px 0 0; opacity: 0.9;">Issue Status Update</p>
     </div>
     <div class="content">
@@ -65,7 +65,7 @@ const generateEmailHtml = (issue: any, newStatus: string, newStatusLabel: string
       <p>Thank you for helping improve our city! We appreciate your patience and engagement.</p>
     </div>
     <div class="footer">
-      <p>CityFix - Making our city better, together</p>
+      <p>City Sentinel - Making our city better, together</p>
       <p style="font-size: 12px; color: #9ca3af;">You can manage your notification preferences in your profile settings.</p>
     </div>
   </div>
@@ -86,7 +86,7 @@ const sendEmail = async (to: string, subject: string, html: string) => {
       "Authorization": `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "CityFix <onboarding@resend.dev>",
+      from: "City Sentinel <onboarding@resend.dev>",
       to: [to],
       subject,
       html,

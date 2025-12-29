@@ -167,7 +167,7 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-hero shadow-lg mb-4">
             <MapPin className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold">Welcome to CityFix</h1>
+          <h1 className="text-2xl font-bold">Welcome to City Sentinel</h1>
           <p className="text-muted-foreground mt-2">
             {showForgotPassword 
               ? 'Enter your email to reset your password'
