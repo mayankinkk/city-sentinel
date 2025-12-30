@@ -15,6 +15,7 @@ import {
   Shield,
   User
 } from 'lucide-react';
+import citySentinelLogo from '@/assets/city-sentinel-logo.png';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -37,9 +38,11 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-hero shadow-md group-hover:shadow-glow transition-shadow">
-              <MapPin className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img 
+              src={citySentinelLogo} 
+              alt="City Sentinel Logo" 
+              className="h-10 w-10 object-contain group-hover:scale-105 transition-transform"
+            />
             <span className="text-xl font-bold gradient-text">City Sentinel</span>
           </Link>
 
