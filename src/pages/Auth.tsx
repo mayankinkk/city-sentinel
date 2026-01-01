@@ -8,45 +8,58 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, Phone, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
 
-const signInSchema = z.object({
+const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const signUpSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+const signUpDetailsSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   full_name: z.string().min(2, 'Full name is required'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
   address: z.string().min(5, 'Address is required'),
 });
 
+const signInPasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
-type SignInFormData = z.infer<typeof signInSchema>;
-type SignUpFormData = z.infer<typeof signUpSchema>;
+type EmailFormData = z.infer<typeof emailSchema>;
+type SignUpDetailsFormData = z.infer<typeof signUpDetailsSchema>;
+type SignInPasswordFormData = z.infer<typeof signInPasswordSchema>;
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+type AuthStep = 'email' | 'otp' | 'details' | 'signin-password';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [authStep, setAuthStep] = useState<AuthStep>('email');
+  const [email, setEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
-  const signInForm = useForm<SignInFormData>({
-    resolver: zodResolver(signInSchema),
+  const emailForm = useForm<EmailFormData>({
+    resolver: zodResolver(emailSchema),
   });
 
-  const signUpForm = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+  const signUpDetailsForm = useForm<SignUpDetailsFormData>({
+    resolver: zodResolver(signUpDetailsSchema),
+  });
+
+  const signInPasswordForm = useForm<SignInPasswordFormData>({
+    resolver: zodResolver(signInPasswordSchema),
   });
 
   const forgotPasswordForm = useForm<ForgotPasswordFormData>({
@@ -59,75 +72,153 @@ export default function Auth() {
     }
   }, [user, loading, navigate]);
 
-  const onSignIn = async (data: SignInFormData) => {
+  const resetAuthFlow = () => {
+    setAuthStep('email');
+    setEmail('');
+    setOtpCode('');
+    emailForm.reset();
+    signUpDetailsForm.reset();
+    signInPasswordForm.reset();
+  };
+
+  // Step 1: Send OTP to email
+  const onEmailSubmit = async (data: EmailFormData) => {
     setIsLoading(true);
     try {
-      const { error } = await signIn(data.email, data.password);
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password');
-        } else {
-          toast.error(error.message);
-        }
-        return;
-      }
-
-      // Check if user is an admin - if so, redirect to authority login
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.session.user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (roleData) {
-          await supabase.auth.signOut();
-          toast.error('Authority accounts must sign in through the Authority Portal');
+      setEmail(data.email);
+      
+      if (activeTab === 'signin') {
+        // For sign in, check if user exists first, then send OTP
+        const { error } = await supabase.auth.signInWithOtp({
+          email: data.email,
+          options: {
+            shouldCreateUser: false,
+          },
+        });
+        
+        if (error) {
+          if (error.message.includes('Signups not allowed')) {
+            toast.error('No account found with this email. Please sign up first.');
+            setActiveTab('signup');
+          } else {
+            toast.error(error.message);
+          }
           return;
         }
+        
+        toast.success('Verification code sent to your email!');
+        setAuthStep('otp');
+      } else {
+        // For sign up, send OTP
+        const { error } = await supabase.auth.signInWithOtp({
+          email: data.email,
+          options: {
+            shouldCreateUser: true,
+          },
+        });
+        
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        
+        toast.success('Verification code sent to your email!');
+        setAuthStep('otp');
       }
-
-      toast.success('Welcome back!');
-      navigate('/');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onSignUp = async (data: SignUpFormData) => {
+  // Step 2: Verify OTP
+  const onVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      toast.error('Please enter the 6-digit code');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { error } = await signUp(data.email, data.password);
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: 'email',
+      });
+
       if (error) {
-        if (error.message.includes('User already registered')) {
-          toast.error('An account with this email already exists. Please sign in.');
-          setActiveTab('signin');
-        } else {
-          toast.error(error.message);
-        }
+        toast.error('Invalid verification code. Please try again.');
         return;
       }
 
-      // Get the newly created user and create their profile
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            user_id: session.session.user.id,
-            full_name: data.full_name,
-            phone: data.phone,
-            address: data.address,
-          });
+      if (activeTab === 'signin') {
+        // Check if user is admin
+        if (data.user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
+          if (roleData) {
+            await supabase.auth.signOut();
+            toast.error('Authority accounts must sign in through the Authority Portal');
+            resetAuthFlow();
+            return;
+          }
         }
+
+        toast.success('Welcome back!');
+        navigate('/');
+      } else {
+        // For sign up, proceed to collect additional details
+        setAuthStep('details');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 3 (Sign Up): Save additional details
+  const onSignUpDetails = async (data: SignUpDetailsFormData) => {
+    setIsLoading(true);
+    try {
+      // Get the current session
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast.error('Session expired. Please try again.');
+        resetAuthFlow();
+        return;
       }
 
-      toast.success('Account created successfully! You are now signed in.');
+      // Update user password
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: data.password,
+      });
+
+      if (passwordError) {
+        toast.error('Failed to set password: ' + passwordError.message);
+        return;
+      }
+
+      // Save profile data
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: session.session.user.id,
+          full_name: data.full_name,
+          phone: data.phone,
+          address: data.address,
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        toast.error('Failed to save profile details');
+        return;
+      }
+
+      toast.success('Account created successfully!');
       navigate('/');
     } finally {
       setIsLoading(false);
@@ -152,6 +243,44 @@ export default function Auth() {
     }
   };
 
+  // Sign in with password (fallback)
+  const onSignInWithPassword = async (data: SignInPasswordFormData) => {
+    setIsLoading(true);
+    try {
+      const { error } = await signIn(email, data.password);
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password');
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
+
+      // Check if user is an admin
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (roleData) {
+          await supabase.auth.signOut();
+          toast.error('Authority accounts must sign in through the Authority Portal');
+          return;
+        }
+      }
+
+      toast.success('Welcome back!');
+      navigate('/');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
@@ -159,6 +288,290 @@ export default function Auth() {
       </div>
     );
   }
+
+  const renderAuthContent = () => {
+    if (showForgotPassword) {
+      return (
+        <>
+          <CardHeader className="pb-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-fit gap-2 -ml-2"
+              onClick={() => { setShowForgotPassword(false); forgotPasswordForm.reset(); }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Sign In
+            </Button>
+            <CardTitle>Reset Password</CardTitle>
+            <CardDescription>
+              We'll send you an email with a link to reset your password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPassword)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="pl-10"
+                    {...forgotPasswordForm.register('email')}
+                  />
+                </div>
+                {forgotPasswordForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Send Reset Link
+              </Button>
+            </form>
+          </CardContent>
+        </>
+      );
+    }
+
+    // OTP Verification Step
+    if (authStep === 'otp') {
+      return (
+        <>
+          <CardHeader className="pb-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-fit gap-2 -ml-2"
+              onClick={resetAuthFlow}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <CardTitle>Verify Your Email</CardTitle>
+            <CardDescription>
+              Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={otpCode}
+                onChange={(value) => setOtpCode(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            <Button
+              type="button"
+              variant="hero"
+              size="lg"
+              className="w-full"
+              disabled={isLoading || otpCode.length !== 6}
+              onClick={onVerifyOtp}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Verify Code
+            </Button>
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="link"
+                className="text-sm"
+                disabled={isLoading}
+                onClick={() => onEmailSubmit({ email })}
+              >
+                Didn't receive the code? Resend
+              </Button>
+            </div>
+          </CardContent>
+        </>
+      );
+    }
+
+    // Sign Up Details Step
+    if (authStep === 'details') {
+      return (
+        <>
+          <CardHeader className="pb-4">
+            <CardTitle>Complete Your Profile</CardTitle>
+            <CardDescription>
+              Please provide your details to complete registration
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={signUpDetailsForm.handleSubmit(onSignUpDetails)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="full_name"
+                    type="text"
+                    placeholder="John Doe"
+                    className="pl-10"
+                    {...signUpDetailsForm.register('full_name')}
+                  />
+                </div>
+                {signUpDetailsForm.formState.errors.full_name && (
+                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.full_name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    className="pl-10"
+                    {...signUpDetailsForm.register('phone')}
+                  />
+                </div>
+                {signUpDetailsForm.formState.errors.phone && (
+                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.phone.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address">Address *</Label>
+                <div className="relative">
+                  <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="123 Main St, City"
+                    className="pl-10"
+                    {...signUpDetailsForm.register('address')}
+                  />
+                </div>
+                {signUpDetailsForm.formState.errors.address && (
+                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.address.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Create Password *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-10"
+                    {...signUpDetailsForm.register('password')}
+                  />
+                </div>
+                {signUpDetailsForm.formState.errors.password && (
+                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.password.message}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Complete Registration
+              </Button>
+            </form>
+          </CardContent>
+        </>
+      );
+    }
+
+    // Email Entry Step (default)
+    return (
+      <>
+        <CardHeader className="pb-4">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); resetAuthFlow(); }}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  className="pl-10"
+                  {...emailForm.register('email')}
+                />
+              </div>
+              {emailForm.formState.errors.email && (
+                <p className="text-sm text-destructive">{emailForm.formState.errors.email.message}</p>
+              )}
+            </div>
+
+            {activeTab === 'signin' && (
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="px-0 text-sm"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Forgot your password?
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  Are you an authority?{' '}
+                  <a href="/authority" className="text-primary hover:underline font-medium">
+                    Admin Login
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="hero"
+              size="lg"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {activeTab === 'signin' ? 'Continue with Email' : 'Get Verification Code'}
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              We'll send a 6-digit verification code to your email
+            </p>
+          </form>
+        </CardContent>
+      </>
+    );
+  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
@@ -171,237 +584,16 @@ export default function Auth() {
           <p className="text-muted-foreground mt-2">
             {showForgotPassword 
               ? 'Enter your email to reset your password'
+              : authStep === 'otp'
+              ? 'Verify your email address'
+              : authStep === 'details'
+              ? 'Complete your profile'
               : 'Sign in to report issues and track their progress'}
           </p>
         </div>
 
         <Card>
-          {showForgotPassword ? (
-            <>
-              <CardHeader className="pb-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-fit gap-2 -ml-2"
-                  onClick={() => { setShowForgotPassword(false); forgotPasswordForm.reset(); }}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
-                </Button>
-                <CardTitle>Reset Password</CardTitle>
-                <CardDescription>
-                  We'll send you an email with a link to reset your password.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPassword)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="forgot-email"
-                        type="email"
-                        placeholder="name@example.com"
-                        className="pl-10"
-                        {...forgotPasswordForm.register('email')}
-                      />
-                    </div>
-                    {forgotPasswordForm.formState.errors.email && (
-                      <p className="text-sm text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    variant="hero"
-                    size="lg"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Send Reset Link
-                  </Button>
-                </form>
-              </CardContent>
-            </>
-          ) : (
-            <>
-              <CardHeader className="pb-4">
-                <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); signInForm.reset(); signUpForm.reset(); }}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="signin">Sign In</TabsTrigger>
-                    <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </CardHeader>
-              <CardContent>
-                {activeTab === 'signin' ? (
-                  <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="name@example.com"
-                          className="pl-10"
-                          {...signInForm.register('email')}
-                        />
-                      </div>
-                      {signInForm.formState.errors.email && (
-                        <p className="text-sm text-destructive">{signInForm.formState.errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          {...signInForm.register('password')}
-                        />
-                      </div>
-                      {signInForm.formState.errors.password && (
-                        <p className="text-sm text-destructive">{signInForm.formState.errors.password.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 text-sm"
-                        onClick={() => setShowForgotPassword(true)}
-                      >
-                        Forgot your password?
-                      </Button>
-                      <div className="text-sm text-muted-foreground">
-                        Are you an authority?{' '}
-                        <a href="/authority" className="text-primary hover:underline font-medium">
-                          Admin Login
-                        </a>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      variant="hero"
-                      size="lg"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Sign In
-                    </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="full_name">Full Name *</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="full_name"
-                          type="text"
-                          placeholder="John Doe"
-                          className="pl-10"
-                          {...signUpForm.register('full_name')}
-                        />
-                      </div>
-                      {signUpForm.formState.errors.full_name && (
-                        <p className="text-sm text-destructive">{signUpForm.formState.errors.full_name.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email *</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-email"
-                          type="email"
-                          placeholder="name@example.com"
-                          className="pl-10"
-                          {...signUpForm.register('email')}
-                        />
-                      </div>
-                      {signUpForm.formState.errors.email && (
-                        <p className="text-sm text-destructive">{signUpForm.formState.errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+91 9876543210"
-                          className="pl-10"
-                          {...signUpForm.register('phone')}
-                        />
-                      </div>
-                      {signUpForm.formState.errors.phone && (
-                        <p className="text-sm text-destructive">{signUpForm.formState.errors.phone.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address *</Label>
-                      <div className="relative">
-                        <MapPinned className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="address"
-                          type="text"
-                          placeholder="123 Main St, City"
-                          className="pl-10"
-                          {...signUpForm.register('address')}
-                        />
-                      </div>
-                      {signUpForm.formState.errors.address && (
-                        <p className="text-sm text-destructive">{signUpForm.formState.errors.address.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password *</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          {...signUpForm.register('password')}
-                        />
-                      </div>
-                      {signUpForm.formState.errors.password && (
-                        <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      variant="hero"
-                      size="lg"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Create Account
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </>
-          )}
+          {renderAuthContent()}
         </Card>
       </div>
     </div>
