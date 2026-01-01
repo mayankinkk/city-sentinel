@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile, useUpdateProfile, useUserIssues } from '@/hooks/useProfile';
 import { useFollowedIssues } from '@/hooks/useFollows';
@@ -33,18 +33,18 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Update form when profile loads
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setFormData({
         full_name: profile.full_name || '',
         phone: profile.phone || '',
         address: profile.address || '',
         bio: profile.bio || '',
-        notification_email: profile.notification_email,
-        notification_push: profile.notification_push,
+        notification_email: profile.notification_email ?? true,
+        notification_push: profile.notification_push ?? true,
       });
     }
-  });
+  }, [profile]);
 
   const handleSave = async () => {
     await updateProfile.mutateAsync(formData);
