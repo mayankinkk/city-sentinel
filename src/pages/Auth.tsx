@@ -81,14 +81,14 @@ export default function Auth() {
     signInPasswordForm.reset();
   };
 
-  // Step 1: Send OTP to email
+  // Step 1: Send OTP to email (6-digit code)
   const onEmailSubmit = async (data: EmailFormData) => {
     setIsLoading(true);
     try {
       setEmail(data.email);
       
       if (activeTab === 'signin') {
-        // For sign in, check if user exists first, then send OTP
+        // For sign in, check if user exists first, then send OTP code
         const { error } = await supabase.auth.signInWithOtp({
           email: data.email,
           options: {
@@ -106,10 +106,10 @@ export default function Auth() {
           return;
         }
         
-        toast.success('Verification code sent to your email!');
+        toast.success('A 6-digit verification code has been sent to your email!');
         setAuthStep('otp');
       } else {
-        // For sign up, send OTP
+        // For sign up, send OTP code
         const { error } = await supabase.auth.signInWithOtp({
           email: data.email,
           options: {
@@ -122,7 +122,7 @@ export default function Auth() {
           return;
         }
         
-        toast.success('Verification code sent to your email!');
+        toast.success('A 6-digit verification code has been sent to your email!');
         setAuthStep('otp');
       }
     } finally {
