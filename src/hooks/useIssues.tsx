@@ -141,7 +141,10 @@ export function useUpdateIssue() {
 
         if (notifyError) {
           console.error('notify-status-change failed:', notifyError);
+          toast.error('Could not deliver notifications for this status update.');
           // Don't fail the update if notification fails
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
         }
       }
     },

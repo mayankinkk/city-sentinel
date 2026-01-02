@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, Phone, MapPinned } from 'lucide-react';
+import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
 
 const emailSchema = z.object({
@@ -21,7 +21,6 @@ const emailSchema = z.object({
 // Sign up initial details schema (collected before OTP)
 const signUpInitialSchema = z.object({
   full_name: z.string().min(2, 'Full name is required'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
   email: z.string().email('Please enter a valid email address'),
 });
 
@@ -56,7 +55,7 @@ export default function Auth() {
   const [authStep, setAuthStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [signUpData, setSignUpData] = useState<{ full_name: string; phone: string } | null>(null);
+  const [signUpData, setSignUpData] = useState<{ full_name: string } | null>(null);
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -131,8 +130,7 @@ export default function Auth() {
     setIsLoading(true);
     try {
       setEmail(data.email);
-      setSignUpData({ full_name: data.full_name, phone: data.phone });
-      
+      setSignUpData({ full_name: data.full_name });
       // Send OTP code for sign up
       const { error } = await supabase.auth.signInWithOtp({
         email: data.email,
@@ -202,6 +200,29 @@ export default function Auth() {
     }
   };
 
+  const resendOtp = async () => {
+    if (!email) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: activeTab === 'signup',
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Verification code resent!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Sign Up Step 3: Set password and address after OTP verification
   const onSignUpPassword = async (data: SignUpPasswordFormData) => {
     setIsLoading(true);
@@ -231,7 +252,6 @@ export default function Auth() {
         .upsert({
           user_id: session.session.user.id,
           full_name: signUpData?.full_name || '',
-          phone: signUpData?.phone || '',
           address: data.address,
         });
 
@@ -421,7 +441,7 @@ export default function Auth() {
                 variant="link"
                 className="text-sm"
                 disabled={isLoading}
-                onClick={() => onEmailSubmit({ email })}
+                onClick={resendOtp}
               >
                 Didn't receive the code? Resend
               </Button>
@@ -558,7 +578,7 @@ export default function Auth() {
               </p>
             </form>
           ) : (
-            // Sign Up: Full name, phone, email first
+            // Sign Up: Full name and email
             <form onSubmit={signUpInitialForm.handleSubmit(onSignUpInitialSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signup_full_name">Full Name *</Label>
@@ -574,23 +594,6 @@ export default function Auth() {
                 </div>
                 {signUpInitialForm.formState.errors.full_name && (
                   <p className="text-sm text-destructive">{signUpInitialForm.formState.errors.full_name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signup_phone">Phone Number *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="signup_phone"
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    className="pl-10"
-                    {...signUpInitialForm.register('phone')}
-                  />
-                </div>
-                {signUpInitialForm.formState.errors.phone && (
-                  <p className="text-sm text-destructive">{signUpInitialForm.formState.errors.phone.message}</p>
                 )}
               </div>
 
