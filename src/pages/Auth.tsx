@@ -18,10 +18,16 @@ const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
-const signUpDetailsSchema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+// Sign up initial details schema (collected before OTP)
+const signUpInitialSchema = z.object({
   full_name: z.string().min(2, 'Full name is required'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
+  email: z.string().email('Please enter a valid email address'),
+});
+
+// Sign up password schema (collected after OTP verification)
+const signUpPasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   address: z.string().min(5, 'Address is required'),
 });
 
@@ -34,11 +40,12 @@ const forgotPasswordSchema = z.object({
 });
 
 type EmailFormData = z.infer<typeof emailSchema>;
-type SignUpDetailsFormData = z.infer<typeof signUpDetailsSchema>;
+type SignUpInitialFormData = z.infer<typeof signUpInitialSchema>;
+type SignUpPasswordFormData = z.infer<typeof signUpPasswordSchema>;
 type SignInPasswordFormData = z.infer<typeof signInPasswordSchema>;
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
-type AuthStep = 'email' | 'otp' | 'details' | 'signin-password';
+type AuthStep = 'email' | 'signup-details' | 'otp' | 'signup-password' | 'signin-password';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -49,13 +56,18 @@ export default function Auth() {
   const [authStep, setAuthStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [signUpData, setSignUpData] = useState<{ full_name: string; phone: string } | null>(null);
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
   });
 
-  const signUpDetailsForm = useForm<SignUpDetailsFormData>({
-    resolver: zodResolver(signUpDetailsSchema),
+  const signUpInitialForm = useForm<SignUpInitialFormData>({
+    resolver: zodResolver(signUpInitialSchema),
+  });
+
+  const signUpPasswordForm = useForm<SignUpPasswordFormData>({
+    resolver: zodResolver(signUpPasswordSchema),
   });
 
   const signInPasswordForm = useForm<SignInPasswordFormData>({
@@ -76,55 +88,66 @@ export default function Auth() {
     setAuthStep('email');
     setEmail('');
     setOtpCode('');
+    setSignUpData(null);
     emailForm.reset();
-    signUpDetailsForm.reset();
+    signUpInitialForm.reset();
+    signUpPasswordForm.reset();
     signInPasswordForm.reset();
   };
 
-  // Step 1: Send OTP to email (6-digit code)
+  // Sign In: Send OTP to email (6-digit code)
   const onEmailSubmit = async (data: EmailFormData) => {
     setIsLoading(true);
     try {
       setEmail(data.email);
       
-      if (activeTab === 'signin') {
-        // For sign in, check if user exists first, then send OTP code
-        const { error } = await supabase.auth.signInWithOtp({
-          email: data.email,
-          options: {
-            shouldCreateUser: false,
-          },
-        });
-        
-        if (error) {
-          if (error.message.includes('Signups not allowed')) {
-            toast.error('No account found with this email. Please sign up first.');
-            setActiveTab('signup');
-          } else {
-            toast.error(error.message);
-          }
-          return;
-        }
-        
-        toast.success('A 6-digit verification code has been sent to your email!');
-        setAuthStep('otp');
-      } else {
-        // For sign up, send OTP code
-        const { error } = await supabase.auth.signInWithOtp({
-          email: data.email,
-          options: {
-            shouldCreateUser: true,
-          },
-        });
-        
-        if (error) {
+      // For sign in, check if user exists first, then send OTP code
+      const { error } = await supabase.auth.signInWithOtp({
+        email: data.email,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+      
+      if (error) {
+        if (error.message.includes('Signups not allowed')) {
+          toast.error('No account found with this email. Please sign up first.');
+          setActiveTab('signup');
+        } else {
           toast.error(error.message);
-          return;
         }
-        
-        toast.success('A 6-digit verification code has been sent to your email!');
-        setAuthStep('otp');
+        return;
       }
+      
+      toast.success('A 6-digit verification code has been sent to your email!');
+      setAuthStep('otp');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Sign Up Step 1: Collect initial details (name, phone, email) then send OTP
+  const onSignUpInitialSubmit = async (data: SignUpInitialFormData) => {
+    setIsLoading(true);
+    try {
+      setEmail(data.email);
+      setSignUpData({ full_name: data.full_name, phone: data.phone });
+      
+      // Send OTP code for sign up
+      const { error } = await supabase.auth.signInWithOtp({
+        email: data.email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+      
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      
+      toast.success('A 6-digit verification code has been sent to your email!');
+      setAuthStep('otp');
     } finally {
       setIsLoading(false);
     }
@@ -171,16 +194,16 @@ export default function Auth() {
         toast.success('Welcome back!');
         navigate('/');
       } else {
-        // For sign up, proceed to collect additional details
-        setAuthStep('details');
+        // For sign up, proceed to set password and address
+        setAuthStep('signup-password');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Step 3 (Sign Up): Save additional details
-  const onSignUpDetails = async (data: SignUpDetailsFormData) => {
+  // Sign Up Step 3: Set password and address after OTP verification
+  const onSignUpPassword = async (data: SignUpPasswordFormData) => {
     setIsLoading(true);
     try {
       // Get the current session
@@ -202,13 +225,13 @@ export default function Auth() {
         return;
       }
 
-      // Save profile data
+      // Save profile data (using signUpData collected earlier)
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           user_id: session.session.user.id,
-          full_name: data.full_name,
-          phone: data.phone,
+          full_name: signUpData?.full_name || '',
+          phone: signUpData?.phone || '',
           address: data.address,
         });
 
@@ -408,49 +431,32 @@ export default function Auth() {
       );
     }
 
-    // Sign Up Details Step
-    if (authStep === 'details') {
+    // Sign Up Password Step (after OTP verification)
+    if (authStep === 'signup-password') {
       return (
         <>
           <CardHeader className="pb-4">
-            <CardTitle>Complete Your Profile</CardTitle>
+            <CardTitle>Set Your Password</CardTitle>
             <CardDescription>
-              Please provide your details to complete registration
+              Create a password and add your address to complete registration
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={signUpDetailsForm.handleSubmit(onSignUpDetails)} className="space-y-4">
+            <form onSubmit={signUpPasswordForm.handleSubmit(onSignUpPassword)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Full Name *</Label>
+                <Label htmlFor="password">Create Password *</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="full_name"
-                    type="text"
-                    placeholder="John Doe"
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
                     className="pl-10"
-                    {...signUpDetailsForm.register('full_name')}
+                    {...signUpPasswordForm.register('password')}
                   />
                 </div>
-                {signUpDetailsForm.formState.errors.full_name && (
-                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.full_name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    className="pl-10"
-                    {...signUpDetailsForm.register('phone')}
-                  />
-                </div>
-                {signUpDetailsForm.formState.errors.phone && (
-                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.phone.message}</p>
+                {signUpPasswordForm.formState.errors.password && (
+                  <p className="text-sm text-destructive">{signUpPasswordForm.formState.errors.password.message}</p>
                 )}
               </div>
 
@@ -463,28 +469,11 @@ export default function Auth() {
                     type="text"
                     placeholder="123 Main St, City"
                     className="pl-10"
-                    {...signUpDetailsForm.register('address')}
+                    {...signUpPasswordForm.register('address')}
                   />
                 </div>
-                {signUpDetailsForm.formState.errors.address && (
-                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.address.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Create Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-10"
-                    {...signUpDetailsForm.register('password')}
-                  />
-                </div>
-                {signUpDetailsForm.formState.errors.password && (
-                  <p className="text-sm text-destructive">{signUpDetailsForm.formState.errors.password.message}</p>
+                {signUpPasswordForm.formState.errors.address && (
+                  <p className="text-sm text-destructive">{signUpPasswordForm.formState.errors.address.message}</p>
                 )}
               </div>
 
@@ -504,7 +493,7 @@ export default function Auth() {
       );
     }
 
-    // Email Entry Step (default)
+    // Email Entry Step (Sign In) or Details Entry Step (Sign Up)
     return (
       <>
         <CardHeader className="pb-4">
@@ -516,25 +505,26 @@ export default function Auth() {
           </Tabs>
         </CardHeader>
         <CardContent>
-          <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pl-10"
-                  {...emailForm.register('email')}
-                />
+          {activeTab === 'signin' ? (
+            // Sign In: Just email
+            <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="pl-10"
+                    {...emailForm.register('email')}
+                  />
+                </div>
+                {emailForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">{emailForm.formState.errors.email.message}</p>
+                )}
               </div>
-              {emailForm.formState.errors.email && (
-                <p className="text-sm text-destructive">{emailForm.formState.errors.email.message}</p>
-              )}
-            </div>
 
-            {activeTab === 'signin' && (
               <div className="space-y-2">
                 <Button
                   type="button"
@@ -551,23 +541,92 @@ export default function Auth() {
                   </a>
                 </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              variant="hero"
-              size="lg"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {activeTab === 'signin' ? 'Continue with Email' : 'Get Verification Code'}
-            </Button>
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Continue with Email
+              </Button>
 
-            <p className="text-xs text-center text-muted-foreground">
-              We'll send a 6-digit verification code to your email
-            </p>
-          </form>
+              <p className="text-xs text-center text-muted-foreground">
+                We'll send a 6-digit verification code to your email
+              </p>
+            </form>
+          ) : (
+            // Sign Up: Full name, phone, email first
+            <form onSubmit={signUpInitialForm.handleSubmit(onSignUpInitialSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup_full_name">Full Name *</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup_full_name"
+                    type="text"
+                    placeholder="John Doe"
+                    className="pl-10"
+                    {...signUpInitialForm.register('full_name')}
+                  />
+                </div>
+                {signUpInitialForm.formState.errors.full_name && (
+                  <p className="text-sm text-destructive">{signUpInitialForm.formState.errors.full_name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup_phone">Phone Number *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup_phone"
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    className="pl-10"
+                    {...signUpInitialForm.register('phone')}
+                  />
+                </div>
+                {signUpInitialForm.formState.errors.phone && (
+                  <p className="text-sm text-destructive">{signUpInitialForm.formState.errors.phone.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup_email">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup_email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="pl-10"
+                    {...signUpInitialForm.register('email')}
+                  />
+                </div>
+                {signUpInitialForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">{signUpInitialForm.formState.errors.email.message}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Get Verification Code
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                We'll send a 6-digit verification code to your email
+              </p>
+            </form>
+          )}
         </CardContent>
       </>
     );
@@ -586,8 +645,8 @@ export default function Auth() {
               ? 'Enter your email to reset your password'
               : authStep === 'otp'
               ? 'Verify your email address'
-              : authStep === 'details'
-              ? 'Complete your profile'
+              : authStep === 'signup-password'
+              ? 'Set your password'
               : 'Sign in to report issues and track their progress'}
           </p>
         </div>
