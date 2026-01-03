@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -13,6 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned } from 'lucide-react';
 import { toast } from 'sonner';
+
+const OTP_RESEND_COOLDOWN = 60; // seconds
 
 const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -56,6 +58,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [signUpData, setSignUpData] = useState<{ full_name: string } | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -83,11 +87,44 @@ export default function Auth() {
     }
   }, [user, loading, navigate]);
 
+  // Cleanup cooldown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startResendCooldown = () => {
+    setResendCooldown(OTP_RESEND_COOLDOWN);
+    
+    if (cooldownIntervalRef.current) {
+      clearInterval(cooldownIntervalRef.current);
+    }
+    
+    cooldownIntervalRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownIntervalRef.current) {
+            clearInterval(cooldownIntervalRef.current);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const resetAuthFlow = () => {
     setAuthStep('email');
     setEmail('');
     setOtpCode('');
     setSignUpData(null);
+    setResendCooldown(0);
+    if (cooldownIntervalRef.current) {
+      clearInterval(cooldownIntervalRef.current);
+    }
     emailForm.reset();
     signUpInitialForm.reset();
     signUpPasswordForm.reset();
@@ -120,12 +157,13 @@ export default function Auth() {
       
       toast.success('A 6-digit verification code has been sent to your email!');
       setAuthStep('otp');
+      startResendCooldown();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign Up Step 1: Collect initial details (name, phone, email) then send OTP
+  // Sign Up Step 1: Collect initial details (name, email) then send OTP
   const onSignUpInitialSubmit = async (data: SignUpInitialFormData) => {
     setIsLoading(true);
     try {
@@ -146,6 +184,7 @@ export default function Auth() {
       
       toast.success('A 6-digit verification code has been sent to your email!');
       setAuthStep('otp');
+      startResendCooldown();
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +240,7 @@ export default function Auth() {
   };
 
   const resendOtp = async () => {
-    if (!email) return;
+    if (!email || resendCooldown > 0) return;
 
     setIsLoading(true);
     try {
@@ -218,6 +257,7 @@ export default function Auth() {
       }
 
       toast.success('Verification code resent!');
+      startResendCooldown();
     } finally {
       setIsLoading(false);
     }
@@ -440,10 +480,12 @@ export default function Auth() {
                 type="button"
                 variant="link"
                 className="text-sm"
-                disabled={isLoading}
+                disabled={isLoading || resendCooldown > 0}
                 onClick={resendOtp}
               >
-                Didn't receive the code? Resend
+                {resendCooldown > 0 
+                  ? `Resend code in ${resendCooldown}s` 
+                  : "Didn't receive the code? Resend"}
               </Button>
             </div>
           </CardContent>
