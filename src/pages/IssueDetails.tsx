@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useIssue, useUpdateIssue, useDeleteIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { issueTypeLabels, issueTypeIcons, statusLabels, IssueStatus } from '@/types/issue';
 import { format } from 'date-fns';
-import { MapPin, Calendar, ArrowLeft, Loader2, Trash2, ExternalLink } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, Loader2, Trash2, ExternalLink, Bell } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function IssueDetails() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +23,34 @@ export default function IssueDetails() {
   const { user, isAdmin } = useAuth();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
+
+  const handleTestNotification = async () => {
+    if (!user || !issue) return;
+    
+    setIsTestingNotification(true);
+    try {
+      const { error } = await supabase.functions.invoke('notify-status-change', {
+        body: {
+          issue_id: issue.id,
+          old_status: 'pending',
+          new_status: 'in_progress',
+        },
+      });
+
+      if (error) {
+        console.error('Test notification failed:', error);
+        toast.error('Failed to send test notification: ' + error.message);
+      } else {
+        toast.success('Test notification sent! Check your notifications.');
+      }
+    } catch (err) {
+      console.error('Test notification error:', err);
+      toast.error('Failed to send test notification');
+    } finally {
+      setIsTestingNotification(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: IssueStatus) => {
     if (!issue) return;
@@ -218,6 +248,26 @@ export default function IssueDetails() {
                     )}
                     Delete Issue
                   </Button>
+
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-xs text-muted-foreground mb-2">Debug Tools</p>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={handleTestNotification}
+                      disabled={isTestingNotification}
+                    >
+                      {isTestingNotification ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Bell className="h-4 w-4" />
+                      )}
+                      Test Notification
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Sends a sample notification to verify the notification system.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
