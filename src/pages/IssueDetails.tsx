@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useIssue, useUpdateIssue, useDeleteIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { issueTypeLabels, issueTypeIcons, statusLabels, IssueStatus } from '@/types/issue';
 import { format } from 'date-fns';
-import { MapPin, Calendar, ArrowLeft, Loader2, Trash2, ExternalLink, Bell } from 'lucide-react';
+import { MapPin, Calendar, ArrowLeft, Loader2, Trash2, ExternalLink, Bell, Upload, Image } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,8 @@ export default function IssueDetails() {
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
   const [isTestingNotification, setIsTestingNotification] = useState(false);
+  const [isUploadingResolvedImage, setIsUploadingResolvedImage] = useState(false);
+  const resolvedImageInputRef = useRef<HTMLInputElement>(null);
 
   const handleTestNotification = async () => {
     if (!user || !issue) return;
@@ -49,6 +51,53 @@ export default function IssueDetails() {
       toast.error('Failed to send test notification');
     } finally {
       setIsTestingNotification(false);
+    }
+  };
+
+  const handleResolvedImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !issue) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingResolvedImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${issue.id}-resolved-${Date.now()}.${fileExt}`;
+      const filePath = `resolved/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('issue-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('issue-images')
+        .getPublicUrl(filePath);
+
+      await updateIssue.mutateAsync({
+        id: issue.id,
+        resolved_image_url: publicUrl,
+      });
+
+      toast.success('Resolved image uploaded successfully!');
+    } catch (error) {
+      console.error('Failed to upload resolved image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploadingResolvedImage(false);
+      if (resolvedImageInputRef.current) {
+        resolvedImageInputRef.current.value = '';
+      }
     }
   };
 
@@ -127,12 +176,32 @@ export default function IssueDetails() {
               </div>
             </div>
 
-            {/* Image */}
+            {/* Issue Image */}
             {issue.image_url && (
               <Card className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Reported Issue</CardTitle>
+                </CardHeader>
                 <img
                   src={issue.image_url}
                   alt={issue.title}
+                  className="w-full h-auto max-h-[500px] object-cover"
+                />
+              </Card>
+            )}
+
+            {/* Resolved Image */}
+            {issue.resolved_image_url && (
+              <Card className="overflow-hidden border-status-resolved/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-status-resolved flex items-center gap-2">
+                    <Image className="h-4 w-4" />
+                    Resolution Proof
+                  </CardTitle>
+                </CardHeader>
+                <img
+                  src={issue.resolved_image_url}
+                  alt="Resolved issue"
                   className="w-full h-auto max-h-[500px] object-cover"
                 />
               </Card>
@@ -233,6 +302,38 @@ export default function IssueDetails() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Resolved Image Upload */}
+                  <div className="border-t pt-4">
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <Image className="h-4 w-4" />
+                      Upload Resolution Proof
+                    </label>
+                    <input
+                      ref={resolvedImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleResolvedImageUpload}
+                      className="hidden"
+                      disabled={isUploadingResolvedImage}
+                    />
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => resolvedImageInputRef.current?.click()}
+                      disabled={isUploadingResolvedImage}
+                    >
+                      {isUploadingResolvedImage ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {issue.resolved_image_url ? 'Replace Image' : 'Upload Image'}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Upload a photo showing the resolved issue.
+                    </p>
                   </div>
 
                   <Button

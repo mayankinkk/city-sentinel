@@ -14,6 +14,7 @@ type DbIssue = {
   longitude: number;
   address: string | null;
   image_url: string | null;
+  resolved_image_url: string | null;
   reporter_id: string | null;
   reporter_email: string | null;
   created_at: string;
@@ -32,6 +33,7 @@ const mapDbIssueToIssue = (dbIssue: DbIssue): Issue => ({
   longitude: dbIssue.longitude,
   address: dbIssue.address ?? undefined,
   image_url: dbIssue.image_url ?? undefined,
+  resolved_image_url: dbIssue.resolved_image_url ?? undefined,
   reporter_id: dbIssue.reporter_id ?? undefined,
   reporter_email: dbIssue.reporter_email ?? undefined,
   created_at: dbIssue.created_at,
@@ -107,6 +109,7 @@ interface UpdateIssueData {
   status?: IssueStatus;
   priority?: IssuePriority;
   resolved_at?: string | null;
+  resolved_image_url?: string;
 }
 
 export function useUpdateIssue() {
