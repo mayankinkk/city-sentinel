@@ -180,6 +180,7 @@ export type Database = {
           reporter_email: string | null
           reporter_id: string | null
           resolved_at: string | null
+          resolved_image_url: string | null
           status: Database["public"]["Enums"]["issue_status"]
           terms_accepted: boolean | null
           title: string
@@ -200,6 +201,7 @@ export type Database = {
           reporter_email?: string | null
           reporter_id?: string | null
           resolved_at?: string | null
+          resolved_image_url?: string | null
           status?: Database["public"]["Enums"]["issue_status"]
           terms_accepted?: boolean | null
           title: string
@@ -220,6 +222,7 @@ export type Database = {
           reporter_email?: string | null
           reporter_id?: string | null
           resolved_at?: string | null
+          resolved_image_url?: string | null
           status?: Database["public"]["Enums"]["issue_status"]
           terms_accepted?: boolean | null
           title?: string

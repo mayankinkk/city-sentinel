@@ -24,6 +24,7 @@ export interface Issue {
   longitude: number;
   address?: string;
   image_url?: string;
+  resolved_image_url?: string;
   reporter_id?: string;
   reporter_email?: string;
   department_id?: string;
