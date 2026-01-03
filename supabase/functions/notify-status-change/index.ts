@@ -97,10 +97,13 @@ const sendEmail = async (to: string, subject: string, html: string) => {
 };
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("notify-status-change function called");
+  console.log("=== notify-status-change function called ===");
   console.log("Request method:", req.method);
+  console.log("Request URL:", req.url);
   
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -108,8 +111,8 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    console.log("SUPABASE_URL exists:", !!supabaseUrl);
-    console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!supabaseKey);
+    console.log("Environment check - SUPABASE_URL exists:", !!supabaseUrl);
+    console.log("Environment check - SUPABASE_SERVICE_ROLE_KEY exists:", !!supabaseKey);
 
     if (!supabaseUrl || !supabaseKey) {
       console.error("Missing Supabase environment variables");
@@ -121,10 +124,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const body = await req.text();
-    console.log("Request body:", body);
-    
-    const { issue_id, old_status, new_status }: NotifyStatusChangeRequest = JSON.parse(body);
+    let body: string;
+    try {
+      body = await req.text();
+      console.log("Raw request body:", body);
+    } catch (bodyError) {
+      console.error("Error reading request body:", bodyError);
+      return new Response(
+        JSON.stringify({ error: "Failed to read request body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!body) {
+      console.error("Empty request body received");
+      return new Response(
+        JSON.stringify({ error: "Empty request body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    let parsedBody: NotifyStatusChangeRequest;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch (parseError) {
+      console.error("Error parsing JSON body:", parseError);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { issue_id, old_status, new_status } = parsedBody;
     
     console.log(`Processing status change for issue ${issue_id}: ${old_status} -> ${new_status}`);
 
