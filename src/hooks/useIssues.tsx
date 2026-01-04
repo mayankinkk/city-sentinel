@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Issue, IssueType, IssuePriority, IssueStatus } from '@/types/issue';
+import { Issue, IssueType, IssuePriority, IssueStatus, VerificationStatus } from '@/types/issue';
 import { toast } from 'sonner';
 
 type DbIssue = {
@@ -17,6 +17,10 @@ type DbIssue = {
   resolved_image_url: string | null;
   reporter_id: string | null;
   reporter_email: string | null;
+  verification_status: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_notes: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
@@ -36,6 +40,10 @@ const mapDbIssueToIssue = (dbIssue: DbIssue): Issue => ({
   resolved_image_url: dbIssue.resolved_image_url ?? undefined,
   reporter_id: dbIssue.reporter_id ?? undefined,
   reporter_email: dbIssue.reporter_email ?? undefined,
+  verification_status: (dbIssue.verification_status as VerificationStatus) ?? undefined,
+  verified_by: dbIssue.verified_by ?? undefined,
+  verified_at: dbIssue.verified_at ?? undefined,
+  verification_notes: dbIssue.verification_notes ?? undefined,
   created_at: dbIssue.created_at,
   updated_at: dbIssue.updated_at,
   resolved_at: dbIssue.resolved_at ?? undefined,
@@ -110,6 +118,10 @@ interface UpdateIssueData {
   priority?: IssuePriority;
   resolved_at?: string | null;
   resolved_image_url?: string;
+  verification_status?: VerificationStatus;
+  verified_by?: string;
+  verified_at?: string;
+  verification_notes?: string;
 }
 
 export function useUpdateIssue() {
@@ -157,6 +169,42 @@ export function useUpdateIssue() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to update issue: ${error.message}`);
+    },
+  });
+}
+
+export function useVerifyIssue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      verification_status, 
+      verified_by, 
+      verification_notes 
+    }: { 
+      id: string; 
+      verification_status: VerificationStatus; 
+      verified_by: string;
+      verification_notes?: string;
+    }) => {
+      const { error } = await supabase
+        .from('issues')
+        .update({
+          verification_status,
+          verified_by,
+          verified_at: new Date().toISOString(),
+          verification_notes,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      toast.success('Issue verification updated!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to verify issue: ${error.message}`);
     },
   });
 }

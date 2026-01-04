@@ -13,24 +13,42 @@ import {
   Menu,
   X,
   Shield,
-  User
+  User,
+  Crown,
+  UserCog,
+  Eye,
+  Building2
 } from 'lucide-react';
 import citySentinelLogo from '@/assets/city-sentinel-logo.png';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, userRoles, signOut } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Check if user has any dashboard access
+  const hasDashboardAccess = userRoles.isSuperAdmin || userRoles.isAdmin || userRoles.isDepartmentAdmin || userRoles.isModerator;
 
   const navItems = [
     { path: '/map', label: 'Map', icon: MapPin },
     { path: '/issues', label: 'Issues', icon: FileText },
-    ...(isAdmin ? [{ path: '/dashboard', label: 'Dashboard', icon: BarChart3 }] : []),
+    ...(hasDashboardAccess ? [{ path: '/dashboard', label: 'Dashboard', icon: BarChart3 }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Get role badge info
+  const getRoleBadge = () => {
+    if (userRoles.isSuperAdmin) return { label: 'Super Admin', icon: Crown, color: 'bg-purple-500/10 text-purple-600' };
+    if (userRoles.isAdmin) return { label: 'Admin', icon: UserCog, color: 'bg-blue-500/10 text-blue-600' };
+    if (userRoles.isDepartmentAdmin) return { label: 'Authority', icon: Building2, color: 'bg-green-500/10 text-green-600' };
+    if (userRoles.isModerator) return { label: 'Moderator', icon: Eye, color: 'bg-orange-500/10 text-orange-600' };
+    return null;
+  };
+
+  const roleBadge = getRoleBadge();
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -77,10 +95,13 @@ export function Navbar() {
                     Report Issue
                   </Button>
                 </Link>
-                {isAdmin && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
-                    <Shield className="h-3 w-3" />
-                    Admin
+                {roleBadge && (
+                  <div className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                    roleBadge.color
+                  )}>
+                    <roleBadge.icon className="h-3 w-3" />
+                    {roleBadge.label}
                   </div>
                 )}
                 <Link to="/profile">
@@ -129,6 +150,15 @@ export function Navbar() {
                   </Button>
                 </Link>
               ))}
+              {roleBadge && (
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium",
+                  roleBadge.color
+                )}>
+                  <roleBadge.icon className="h-4 w-4" />
+                  {roleBadge.label}
+                </div>
+              )}
               <div className="h-px bg-border/50 my-2" />
               {user ? (
                 <>
@@ -136,6 +166,12 @@ export function Navbar() {
                     <Button variant="hero" className="w-full gap-2">
                       <Plus className="h-4 w-4" />
                       Report Issue
+                    </Button>
+                  </Link>
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                      <User className="h-4 w-4" />
+                      Profile
                     </Button>
                   </Link>
                   <Button variant="ghost" onClick={() => { signOut(); setIsMenuOpen(false); }} className="w-full justify-start gap-2">

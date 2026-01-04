@@ -1,18 +1,44 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useIssue, useUpdateIssue, useDeleteIssue } from '@/hooks/useIssues';
+import { useIssue, useUpdateIssue, useDeleteIssue, useVerifyIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
 import { StatusBadge } from '@/components/issues/StatusBadge';
 import { PriorityBadge } from '@/components/issues/PriorityBadge';
+import { VerificationBadge } from '@/components/issues/VerificationBadge';
 import { IssueActions } from '@/components/issues/IssueActions';
 import { CommentsSection } from '@/components/issues/CommentsSection';
 import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { issueTypeLabels, issueTypeIcons, statusLabels, IssueStatus } from '@/types/issue';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { 
+  issueTypeLabels, 
+  issueTypeIcons, 
+  statusLabels, 
+  IssueStatus, 
+  VerificationStatus,
+  verificationStatusLabels 
+} from '@/types/issue';
 import { format } from 'date-fns';
-import { MapPin, Calendar, ArrowLeft, Loader2, Trash2, ExternalLink, Bell, Upload, Image } from 'lucide-react';
+import { 
+  MapPin, 
+  Calendar, 
+  ArrowLeft, 
+  Loader2, 
+  Trash2, 
+  ExternalLink, 
+  Bell, 
+  Upload, 
+  Image,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
+  Crown,
+  UserCog,
+  Eye
+} from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,11 +47,13 @@ export default function IssueDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: issue, isLoading, error } = useIssue(id || '');
-  const { user, isAdmin } = useAuth();
+  const { user, userRoles } = useAuth();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
+  const verifyIssue = useVerifyIssue();
   const [isTestingNotification, setIsTestingNotification] = useState(false);
   const [isUploadingResolvedImage, setIsUploadingResolvedImage] = useState(false);
+  const [verificationNotes, setVerificationNotes] = useState('');
   const resolvedImageInputRef = useRef<HTMLInputElement>(null);
 
   const handleTestNotification = async () => {
@@ -112,6 +140,18 @@ export default function IssueDetails() {
     });
   };
 
+  const handleVerification = async (status: VerificationStatus) => {
+    if (!issue || !user) return;
+    
+    await verifyIssue.mutateAsync({
+      id: issue.id,
+      verification_status: status,
+      verified_by: user.id,
+      verification_notes: verificationNotes || undefined,
+    });
+    setVerificationNotes('');
+  };
+
   const handleDelete = async () => {
     if (!issue || !confirm('Are you sure you want to delete this issue?')) return;
     
@@ -144,7 +184,17 @@ export default function IssueDetails() {
   }
 
   const isOwner = user?.id === issue.reporter_id;
-  const canModify = isOwner || isAdmin;
+
+  // Role-based permission helpers
+  const getRoleBadge = () => {
+    if (userRoles.isSuperAdmin) return { label: 'Super Admin', icon: Crown, color: 'bg-purple-500/10 text-purple-600' };
+    if (userRoles.isAdmin) return { label: 'Admin', icon: UserCog, color: 'bg-blue-500/10 text-blue-600' };
+    if (userRoles.isDepartmentAdmin) return { label: 'Authority', icon: UserCog, color: 'bg-green-500/10 text-green-600' };
+    if (userRoles.isModerator) return { label: 'Moderator', icon: Eye, color: 'bg-orange-500/10 text-orange-600' };
+    return null;
+  };
+
+  const roleBadge = getRoleBadge();
 
   return (
     <>
@@ -174,6 +224,9 @@ export default function IssueDetails() {
               <div className="flex flex-wrap gap-2">
                 <StatusBadge status={issue.status} />
                 <PriorityBadge priority={issue.priority} />
+                {issue.verification_status && (
+                  <VerificationBadge status={issue.verification_status} />
+                )}
               </div>
             </div>
 
@@ -228,6 +281,26 @@ export default function IssueDetails() {
               </CardContent>
             </Card>
 
+            {/* Verification Notes (if exists) */}
+            {issue.verification_notes && (
+              <Card className="border-orange-500/20">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-orange-500" />
+                    Moderator Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{issue.verification_notes}</p>
+                  {issue.verified_at && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Verified on {format(new Date(issue.verified_at), 'PPP')}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Location Map */}
             <Card>
               <CardHeader>
@@ -260,6 +333,18 @@ export default function IssueDetails() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Role Indicator */}
+            {roleBadge && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <roleBadge.icon className="h-4 w-4" />
+                    <span className="text-sm font-medium">Viewing as {roleBadge.label}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Upvote and Follow Actions */}
             <IssueActions issueId={issue.id} />
 
@@ -288,11 +373,98 @@ export default function IssueDetails() {
               </Card>
             )}
 
-            {/* Admin Actions */}
-            {isAdmin && (
-              <Card>
+            {/* Moderator Actions - Verification */}
+            {userRoles.canVerifyIssues && (
+              <Card className="border-orange-500/20">
                 <CardHeader>
-                  <CardTitle>Authority Actions</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-orange-500" />
+                    Verification
+                  </CardTitle>
+                  <CardDescription>
+                    Verify the authenticity of this report
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Current Status</label>
+                    <div className="mb-3">
+                      {issue.verification_status ? (
+                        <VerificationBadge status={issue.verification_status} />
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">
+                          Pending Verification
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Notes (optional)</label>
+                    <Textarea
+                      placeholder="Add verification notes..."
+                      value={verificationNotes}
+                      onChange={(e) => setVerificationNotes(e.target.value)}
+                      className="mb-3"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-1 border-green-500/30 hover:bg-green-500/10 text-green-600"
+                      onClick={() => handleVerification('verified')}
+                      disabled={verifyIssue.isPending}
+                    >
+                      {verifyIssue.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="h-4 w-4" />
+                      )}
+                      Verified
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-1 border-red-500/30 hover:bg-red-500/10 text-red-600"
+                      onClick={() => handleVerification('invalid')}
+                      disabled={verifyIssue.isPending}
+                    >
+                      {verifyIssue.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShieldX className="h-4 w-4" />
+                      )}
+                      Invalid
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-1 border-gray-500/30 hover:bg-gray-500/10 text-gray-600"
+                    onClick={() => handleVerification('spam')}
+                    disabled={verifyIssue.isPending}
+                  >
+                    {verifyIssue.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldAlert className="h-4 w-4" />
+                    )}
+                    Mark as Spam
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Authority Actions - Status Update */}
+            {userRoles.canUpdateStatus && (
+              <Card className="border-green-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCog className="h-5 w-5 text-green-500" />
+                    Authority Actions
+                  </CardTitle>
+                  <CardDescription>
+                    Update issue status and manage resolution
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -346,7 +518,20 @@ export default function IssueDetails() {
                       Upload a photo showing the resolved issue.
                     </p>
                   </div>
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Super Admin / Admin Actions - Delete */}
+            {userRoles.canDeleteIssues && (
+              <Card className="border-destructive/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <Crown className="h-5 w-5" />
+                    Admin Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <Button
                     variant="destructive"
                     className="w-full gap-2"
@@ -361,7 +546,7 @@ export default function IssueDetails() {
                     Delete Issue
                   </Button>
 
-                  <div className="border-t pt-4 mt-4">
+                  <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground mb-2">Debug Tools</p>
                     <Button
                       variant="outline"
@@ -376,9 +561,6 @@ export default function IssueDetails() {
                       )}
                       Test Notification
                     </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Sends a sample notification to verify the notification system.
-                    </p>
                   </div>
                 </CardContent>
               </Card>

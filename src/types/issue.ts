@@ -13,6 +13,8 @@ export type IssuePriority = 'low' | 'medium' | 'high';
 
 export type IssueStatus = 'pending' | 'in_progress' | 'resolved' | 'withdrawn';
 
+export type VerificationStatus = 'pending_verification' | 'verified' | 'invalid' | 'spam';
+
 export interface Issue {
   id: string;
   title: string;
@@ -30,6 +32,10 @@ export interface Issue {
   department_id?: string;
   assigned_to?: string;
   terms_accepted?: boolean;
+  verification_status?: VerificationStatus;
+  verified_by?: string;
+  verified_at?: string;
+  verification_notes?: string;
   created_at: string;
   updated_at: string;
   resolved_at?: string;
@@ -70,6 +76,20 @@ export const statusLabels: Record<IssueStatus, string> = {
   in_progress: 'In Progress',
   resolved: 'Resolved',
   withdrawn: 'Withdrawn',
+};
+
+export const verificationStatusLabels: Record<VerificationStatus, string> = {
+  pending_verification: 'Pending Verification',
+  verified: 'Verified',
+  invalid: 'Invalid Report',
+  spam: 'Spam',
+};
+
+export const verificationStatusColors: Record<VerificationStatus, string> = {
+  pending_verification: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+  verified: 'bg-green-500/10 text-green-600 border-green-500/20',
+  invalid: 'bg-red-500/10 text-red-600 border-red-500/20',
+  spam: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
 };
 
 export interface Notification {
