@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/issues/StatusBadge';
 import { PriorityBadge } from '@/components/issues/PriorityBadge';
 import { IssueActions } from '@/components/issues/IssueActions';
 import { CommentsSection } from '@/components/issues/CommentsSection';
+import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -176,8 +177,18 @@ export default function IssueDetails() {
               </div>
             </div>
 
-            {/* Issue Image */}
-            {issue.image_url && (
+            {/* Before/After Comparison Slider */}
+            {issue.image_url && issue.resolved_image_url && (
+              <BeforeAfterSlider
+                beforeImage={issue.image_url}
+                afterImage={issue.resolved_image_url}
+                beforeLabel="Before"
+                afterLabel="Resolved"
+              />
+            )}
+
+            {/* Issue Image (only shown if no comparison available) */}
+            {issue.image_url && !issue.resolved_image_url && (
               <Card className="overflow-hidden">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Reported Issue</CardTitle>
@@ -190,8 +201,8 @@ export default function IssueDetails() {
               </Card>
             )}
 
-            {/* Resolved Image */}
-            {issue.resolved_image_url && (
+            {/* Resolved Image Only (if no before image) */}
+            {!issue.image_url && issue.resolved_image_url && (
               <Card className="overflow-hidden border-status-resolved/30">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-status-resolved flex items-center gap-2">
