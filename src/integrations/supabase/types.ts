@@ -185,6 +185,12 @@ export type Database = {
           terms_accepted: boolean | null
           title: string
           updated_at: string
+          verification_notes: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           address?: string | null
@@ -206,6 +212,12 @@ export type Database = {
           terms_accepted?: boolean | null
           title: string
           updated_at?: string
+          verification_notes?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           address?: string | null
@@ -227,6 +239,12 @@ export type Database = {
           terms_accepted?: boolean | null
           title?: string
           updated_at?: string
+          verification_notes?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -359,6 +377,7 @@ export type Database = {
         | "super_admin"
         | "department_admin"
         | "field_worker"
+        | "moderator"
       issue_priority: "low" | "medium" | "high"
       issue_status: "pending" | "in_progress" | "resolved" | "withdrawn"
       issue_type:
@@ -371,6 +390,11 @@ export type Database = {
         | "traffic_sign"
         | "water_leak"
         | "other"
+      verification_status:
+        | "pending_verification"
+        | "verified"
+        | "invalid"
+        | "spam"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -504,6 +528,7 @@ export const Constants = {
         "super_admin",
         "department_admin",
         "field_worker",
+        "moderator",
       ],
       issue_priority: ["low", "medium", "high"],
       issue_status: ["pending", "in_progress", "resolved", "withdrawn"],
@@ -517,6 +542,12 @@ export const Constants = {
         "traffic_sign",
         "water_leak",
         "other",
+      ],
+      verification_status: [
+        "pending_verification",
+        "verified",
+        "invalid",
+        "spam",
       ],
     },
   },
