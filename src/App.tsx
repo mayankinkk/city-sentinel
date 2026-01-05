@@ -16,6 +16,7 @@ import IssueDetails from "./pages/IssueDetails";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotificationCenter from "./pages/NotificationCenter";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/notifications" element={<NotificationCenter />} />
+                <Route path="/admin/users" element={<UserManagement />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

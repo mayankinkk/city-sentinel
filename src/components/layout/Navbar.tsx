@@ -35,6 +35,7 @@ export function Navbar() {
     { path: '/map', label: 'Map', icon: MapPin },
     { path: '/issues', label: 'Issues', icon: FileText },
     ...(hasDashboardAccess ? [{ path: '/dashboard', label: 'Dashboard', icon: BarChart3 }] : []),
+    ...(userRoles.isSuperAdmin ? [{ path: '/admin/users', label: 'Users', icon: Shield }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
