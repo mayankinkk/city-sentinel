@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useIssue, useUpdateIssue, useDeleteIssue, useVerifyIssue } from '@/hooks/useIssues';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useAddVerificationHistory } from '@/hooks/useVerificationHistory';
 import { StatusBadge } from '@/components/issues/StatusBadge';
 import { PriorityBadge } from '@/components/issues/PriorityBadge';
 import { VerificationBadge } from '@/components/issues/VerificationBadge';
@@ -10,11 +12,13 @@ import { CommentsSection } from '@/components/issues/CommentsSection';
 import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
 import { ReporterInfo } from '@/components/issues/ReporterInfo';
 import { VerifierInfo } from '@/components/issues/VerifierInfo';
+import { VerificationHistory } from '@/components/issues/VerificationHistory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   issueTypeLabels, 
   issueTypeIcons, 
@@ -42,7 +46,9 @@ import {
   Crown,
   UserCog,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  History,
+  ChevronDown
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
@@ -53,12 +59,15 @@ export default function IssueDetails() {
   const navigate = useNavigate();
   const { data: issue, isLoading, error } = useIssue(id || '');
   const { user, userRoles } = useAuth();
+  const { data: profile } = useProfile();
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
   const verifyIssue = useVerifyIssue();
+  const addVerificationHistory = useAddVerificationHistory();
   const [isTestingNotification, setIsTestingNotification] = useState(false);
   const [isUploadingResolvedImage, setIsUploadingResolvedImage] = useState(false);
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const resolvedImageInputRef = useRef<HTMLInputElement>(null);
 
   const handleTestNotification = async () => {
@@ -148,12 +157,30 @@ export default function IssueDetails() {
   const handleVerification = async (status: VerificationStatus) => {
     if (!issue || !user) return;
     
+    // Determine verifier role for history
+    let verifierRole = 'user';
+    if (userRoles.isSuperAdmin) verifierRole = 'super_admin';
+    else if (userRoles.isAdmin) verifierRole = 'admin';
+    else if (userRoles.isDepartmentAdmin) verifierRole = 'department_admin';
+    else if (userRoles.isModerator) verifierRole = 'moderator';
+    
     await verifyIssue.mutateAsync({
       id: issue.id,
       verification_status: status,
       verified_by: user.id,
       verification_notes: verificationNotes || undefined,
     });
+    
+    // Add to verification history
+    await addVerificationHistory.mutateAsync({
+      issue_id: issue.id,
+      verification_status: status,
+      verified_by: user.id,
+      verifier_name: profile?.full_name || undefined,
+      verifier_role: verifierRole,
+      verification_notes: verificationNotes || undefined,
+    });
+    
     setVerificationNotes('');
   };
 
@@ -239,7 +266,11 @@ export default function IssueDetails() {
                 <StatusBadge status={issue.status} />
                 <PriorityBadge priority={issue.priority} />
                 {issue.verification_status && (
-                  <VerificationBadge status={issue.verification_status} />
+                  <VerificationBadge 
+                    status={issue.verification_status} 
+                    verifiedBy={issue.verified_by}
+                    verifiedAt={issue.verified_at}
+                  />
                 )}
               </div>
             </div>
@@ -312,6 +343,22 @@ export default function IssueDetails() {
                     verifiedBy={issue.verified_by} 
                     verifiedAt={issue.verified_at} 
                   />
+                  
+                  {/* Verification History */}
+                  <Collapsible open={showHistory} onOpenChange={setShowHistory} className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-between">
+                        <span className="flex items-center gap-2">
+                          <History className="h-4 w-4" />
+                          Verification History
+                        </span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <VerificationHistory issueId={issue.id} />
+                    </CollapsibleContent>
+                  </Collapsible>
                 </CardContent>
               </Card>
             )}
