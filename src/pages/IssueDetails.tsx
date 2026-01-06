@@ -9,6 +9,7 @@ import { IssueActions } from '@/components/issues/IssueActions';
 import { CommentsSection } from '@/components/issues/CommentsSection';
 import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
 import { ReporterInfo } from '@/components/issues/ReporterInfo';
+import { VerifierInfo } from '@/components/issues/VerifierInfo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -294,22 +295,23 @@ export default function IssueDetails() {
               </CardContent>
             </Card>
 
-            {/* Verification Notes (if exists) */}
-            {issue.verification_notes && (
+            {/* Verification Info (if verified) */}
+            {issue.verified_by && (
               <Card className="border-orange-500/20">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-orange-500" />
-                    Moderator Notes
+                    Verification Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{issue.verification_notes}</p>
-                  {issue.verified_at && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Verified on {format(new Date(issue.verified_at), 'PPP')}
-                    </p>
+                  {issue.verification_notes && (
+                    <p className="text-sm text-muted-foreground">{issue.verification_notes}</p>
                   )}
+                  <VerifierInfo 
+                    verifiedBy={issue.verified_by} 
+                    verifiedAt={issue.verified_at} 
+                  />
                 </CardContent>
               </Card>
             )}
