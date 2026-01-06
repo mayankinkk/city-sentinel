@@ -8,6 +8,7 @@ import { VerificationBadge } from '@/components/issues/VerificationBadge';
 import { IssueActions } from '@/components/issues/IssueActions';
 import { CommentsSection } from '@/components/issues/CommentsSection';
 import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
+import { ReporterInfo } from '@/components/issues/ReporterInfo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,7 +20,9 @@ import {
   statusLabels, 
   IssueStatus, 
   VerificationStatus,
-  verificationStatusLabels 
+  verificationStatusLabels,
+  priorityLabels,
+  IssuePriority
 } from '@/types/issue';
 import { format } from 'date-fns';
 import { 
@@ -37,7 +40,8 @@ import {
   ShieldAlert,
   Crown,
   UserCog,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
@@ -150,6 +154,15 @@ export default function IssueDetails() {
       verification_notes: verificationNotes || undefined,
     });
     setVerificationNotes('');
+  };
+
+  const handlePriorityChange = async (newPriority: IssuePriority) => {
+    if (!issue) return;
+    
+    await updateIssue.mutateAsync({
+      id: issue.id,
+      priority: newPriority,
+    });
   };
 
   const handleDelete = async () => {
@@ -382,7 +395,7 @@ export default function IssueDetails() {
                     Verification
                   </CardTitle>
                   <CardDescription>
-                    Verify the authenticity of this report
+                    Verify the authenticity and set severity
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -397,6 +410,33 @@ export default function IssueDetails() {
                         </Badge>
                       )}
                     </div>
+                  </div>
+
+                  {/* Priority/Severity Setting */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      Set Severity
+                    </label>
+                    <Select
+                      value={issue.priority}
+                      onValueChange={(value) => handlePriorityChange(value as IssuePriority)}
+                      disabled={updateIssue.isPending}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(priorityLabels) as IssuePriority[]).map((priority) => (
+                          <SelectItem key={priority} value={priority}>
+                            {priorityLabels[priority]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Assign severity based on impact and urgency
+                    </p>
                   </div>
 
                   <div>
@@ -586,12 +626,7 @@ export default function IssueDetails() {
                   </div>
                 )}
 
-                {issue.reporter_email && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Reported by:</span>
-                    <span className="ml-2">{issue.reporter_email}</span>
-                  </div>
-                )}
+                <ReporterInfo reporterEmail={issue.reporter_email} />
               </CardContent>
             </Card>
           </div>
