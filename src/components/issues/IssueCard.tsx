@@ -2,6 +2,7 @@ import { Issue, issueTypeLabels, issueTypeIcons } from '@/types/issue';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
+import { VerificationBadge } from './VerificationBadge';
 import { MapPin, Calendar, ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -47,6 +48,13 @@ export function IssueCard({ issue }: IssueCardProps) {
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={issue.status} />
             <PriorityBadge priority={issue.priority} />
+            {issue.verification_status && issue.verification_status !== 'pending_verification' && (
+              <VerificationBadge 
+                status={issue.verification_status} 
+                verifiedBy={issue.verified_by}
+                verifiedAt={issue.verified_at}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t border-border/50">

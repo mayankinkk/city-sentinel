@@ -386,6 +386,47 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_history: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          verification_notes: string | null
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_by: string
+          verifier_name: string | null
+          verifier_role: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          verification_notes?: string | null
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_by: string
+          verifier_name?: string | null
+          verifier_role?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          verification_notes?: string | null
+          verification_status?: Database["public"]["Enums"]["verification_status"]
+          verified_by?: string
+          verifier_name?: string | null
+          verifier_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
