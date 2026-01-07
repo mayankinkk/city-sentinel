@@ -2,3 +2,6 @@ project_id = "ovoxylnxndtwehyjzgqy"
 
 [functions.notify-status-change]
 verify_jwt = false
+
+[functions.notify-verification-change]
+verify_jwt = false

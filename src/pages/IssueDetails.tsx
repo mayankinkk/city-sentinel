@@ -159,10 +159,12 @@ export default function IssueDetails() {
     
     // Determine verifier role for history
     let verifierRole = 'user';
-    if (userRoles.isSuperAdmin) verifierRole = 'super_admin';
-    else if (userRoles.isAdmin) verifierRole = 'admin';
-    else if (userRoles.isDepartmentAdmin) verifierRole = 'department_admin';
-    else if (userRoles.isModerator) verifierRole = 'moderator';
+    if (userRoles.isSuperAdmin) verifierRole = 'Super Admin';
+    else if (userRoles.isAdmin) verifierRole = 'Admin';
+    else if (userRoles.isDepartmentAdmin) verifierRole = 'Authority';
+    else if (userRoles.isModerator) verifierRole = 'Moderator';
+    
+    const oldStatus = issue.verification_status;
     
     await verifyIssue.mutateAsync({
       id: issue.id,
@@ -180,6 +182,21 @@ export default function IssueDetails() {
       verifier_role: verifierRole,
       verification_notes: verificationNotes || undefined,
     });
+    
+    // Send verification change notifications
+    try {
+      await supabase.functions.invoke('notify-verification-change', {
+        body: {
+          issue_id: issue.id,
+          old_status: oldStatus,
+          new_status: status,
+          verifier_name: profile?.full_name || null,
+          verifier_role: verifierRole,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to send verification notification:', err);
+    }
     
     setVerificationNotes('');
   };
