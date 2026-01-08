@@ -58,6 +58,43 @@ const ChartContainer = React.forwardRef<
 });
 ChartContainer.displayName = "Chart";
 
+/**
+ * Sanitizes CSS color values to prevent CSS injection attacks.
+ * Only allows valid CSS color formats: hex, rgb, rgba, hsl, hsla, and named colors.
+ * SECURITY: Never pass user input directly to config.color values.
+ */
+function sanitizeCSSValue(value: string): string {
+  if (!value || typeof value !== 'string') return '';
+  
+  const trimmed = value.trim();
+  
+  // Hex colors: #RGB, #RRGGBB, #RRGGBBAA
+  if (/^#[0-9A-Fa-f]{3,8}$/.test(trimmed)) return trimmed;
+  
+  // RGB/RGBA: rgb(R, G, B) or rgba(R, G, B, A)
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(trimmed)) return trimmed;
+  
+  // HSL/HSLA: hsl(H, S%, L%) or hsla(H, S%, L%, A)
+  if (/^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(trimmed)) return trimmed;
+  
+  // Modern HSL syntax: hsl(H S% L% / A)
+  if (/^hsl\(\s*\d{1,3}\s+\d{1,3}%\s+\d{1,3}%(\s*\/\s*(0|1|0?\.\d+|\d{1,3}%))?\s*\)$/.test(trimmed)) return trimmed;
+  
+  // CSS custom properties: var(--color-name)
+  if (/^var\(--[a-zA-Z0-9-]+\)$/.test(trimmed)) return trimmed;
+  
+  // Named colors (only lowercase letters)
+  if (/^[a-z]+$/i.test(trimmed) && trimmed.length <= 20) return trimmed;
+  
+  // Reject everything else to prevent injection
+  return '';
+}
+
+/**
+ * SECURITY: ChartStyle uses dangerouslySetInnerHTML for CSS injection.
+ * All color values are sanitized through sanitizeCSSValue() before use.
+ * Color values must come from trusted configuration only.
+ */
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
 
@@ -74,9 +111,11 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+    const rawColor = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+    const color = rawColor ? sanitizeCSSValue(rawColor) : null;
     return color ? `  --color-${key}: ${color};` : null;
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `,
