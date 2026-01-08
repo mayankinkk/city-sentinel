@@ -574,6 +574,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_notification: {
+        Args: {
+          p_issue_id: string
+          p_message: string
+          p_title: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       user_has_department: {
         Args: { _department_id: string; _user_id: string }
         Returns: boolean

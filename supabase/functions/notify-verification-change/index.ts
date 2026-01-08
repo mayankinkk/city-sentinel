@@ -9,6 +9,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
+// Valid verification status values
+const VALID_VERIFICATION_STATUSES = ["pending_verification", "verified", "invalid", "spam"] as const;
+type VerificationStatus = typeof VALID_VERIFICATION_STATUSES[number];
+
+// UUID regex pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface NotifyVerificationChangeRequest {
   issue_id: string;
   old_status: string | null;
@@ -23,6 +30,71 @@ const verificationLabels: Record<string, string> = {
   invalid: "Invalid",
   spam: "Spam",
 };
+
+// Input validation functions
+function isValidUUID(value: unknown): value is string {
+  return typeof value === "string" && UUID_REGEX.test(value);
+}
+
+function isValidVerificationStatus(value: unknown): value is VerificationStatus {
+  return typeof value === "string" && VALID_VERIFICATION_STATUSES.includes(value as VerificationStatus);
+}
+
+function isNullableString(value: unknown, maxLength: number = 100): boolean {
+  return value === null || value === undefined || (typeof value === "string" && value.length <= maxLength);
+}
+
+function validateRequest(body: unknown): { valid: true; data: NotifyVerificationChangeRequest } | { valid: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { valid: false, error: "Request body must be an object" };
+  }
+
+  const { issue_id, old_status, new_status, verifier_name, verifier_role } = body as Record<string, unknown>;
+
+  if (!isValidUUID(issue_id)) {
+    return { valid: false, error: "issue_id must be a valid UUID" };
+  }
+
+  // old_status can be null for first-time verification
+  if (old_status !== null && !isValidVerificationStatus(old_status)) {
+    return { valid: false, error: `old_status must be null or one of: ${VALID_VERIFICATION_STATUSES.join(", ")}` };
+  }
+
+  if (!isValidVerificationStatus(new_status)) {
+    return { valid: false, error: `new_status must be one of: ${VALID_VERIFICATION_STATUSES.join(", ")}` };
+  }
+
+  if (!isNullableString(verifier_name, 100)) {
+    return { valid: false, error: "verifier_name must be null or a string with max 100 characters" };
+  }
+
+  if (!isNullableString(verifier_role, 50)) {
+    return { valid: false, error: "verifier_role must be null or a string with max 50 characters" };
+  }
+
+  return { 
+    valid: true, 
+    data: { 
+      issue_id, 
+      old_status: old_status as string | null, 
+      new_status, 
+      verifier_name: (verifier_name as string | null) || null,
+      verifier_role: (verifier_role as string | null) || null,
+    } 
+  };
+}
+
+// HTML escape function to prevent XSS
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
 
 const generateEmailHtml = (
   issue: any, 
@@ -66,14 +138,14 @@ const generateEmailHtml = (
       ` : ''}
       <h2 style="margin-top: 0;">${isFollower ? 'An issue you follow has been verified!' : 'Your issue verification status has changed!'}</h2>
       <div class="issue-card">
-        <h3 style="margin-top: 0;">${issue.title}</h3>
-        <p style="color: #6b7280; margin-bottom: 15px;">${issue.description.substring(0, 150)}${issue.description.length > 150 ? '...' : ''}</p>
-        ${issue.address ? `<p style="font-size: 14px; color: #6b7280;">📍 ${issue.address}</p>` : ''}
+        <h3 style="margin-top: 0;">${escapeHtml(issue.title)}</h3>
+        <p style="color: #6b7280; margin-bottom: 15px;">${escapeHtml(issue.description.substring(0, 150))}${issue.description.length > 150 ? '...' : ''}</p>
+        ${issue.address ? `<p style="font-size: 14px; color: #6b7280;">📍 ${escapeHtml(issue.address)}</p>` : ''}
         <p><strong>Verification Status:</strong></p>
-        <span class="status-badge status-${newStatus}">${newStatusLabel}</span>
+        <span class="status-badge status-${newStatus}">${escapeHtml(newStatusLabel)}</span>
         ${verifierName || verifierRole ? `
         <div class="verifier-info">
-          <strong>Verified by:</strong> ${verifierName || 'Unknown'} ${verifierRole ? `(${verifierRole})` : ''}
+          <strong>Verified by:</strong> ${escapeHtml(verifierName || 'Unknown')} ${verifierRole ? `(${escapeHtml(verifierRole)})` : ''}
         </div>
         ` : ''}
       </div>
@@ -152,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    let parsedBody: NotifyVerificationChangeRequest;
+    let parsedBody: unknown;
     try {
       parsedBody = JSON.parse(body);
     } catch (parseError) {
@@ -163,7 +235,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { issue_id, old_status, new_status, verifier_name, verifier_role } = parsedBody;
+    // Validate input with strict schema validation
+    const validationResult = validateRequest(parsedBody);
+    if (!validationResult.valid) {
+      console.error("Validation error:", validationResult.error);
+      return new Response(
+        JSON.stringify({ error: validationResult.error }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { issue_id, old_status, new_status, verifier_name, verifier_role } = validationResult.data;
     
     console.log(`Processing verification change for issue ${issue_id}: ${old_status} -> ${new_status}`);
 
@@ -185,22 +267,21 @@ const handler = async (req: Request): Promise<Response> => {
     const newStatusLabel = verificationLabels[new_status] || new_status;
     const oldStatusLabel = old_status ? (verificationLabels[old_status] || old_status) : "None";
     const notificationTitle = `Issue Verification Updated: ${newStatusLabel}`;
-    const notificationMessage = `Issue "${issue.title}" verification status changed from ${oldStatusLabel} to ${newStatusLabel}.`;
 
     const emailsSent: string[] = [];
     const notificationsCreated: string[] = [];
 
-    // 1. Notify the reporter
+    // 1. Notify the reporter using secure RPC function
     if (issue.reporter_id) {
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert([{
-          user_id: issue.reporter_id,
-          issue_id: issue_id,
-          title: notificationTitle,
-          message: `Your issue "${issue.title}" has been ${newStatusLabel.toLowerCase()}${verifier_role ? ` by a ${verifier_role}` : ''}.`,
-          type: `verification_${new_status}`,
-        }]);
+      const reporterMessage = `Your issue "${issue.title.substring(0, 80)}" has been ${newStatusLabel.toLowerCase()}${verifier_role ? ` by a ${verifier_role}` : ''}.`;
+      
+      const { error: notifError } = await supabase.rpc('insert_notification', {
+        p_user_id: issue.reporter_id,
+        p_issue_id: issue_id,
+        p_title: notificationTitle,
+        p_message: reporterMessage,
+        p_type: `verification_${new_status}`,
+      });
 
       if (notifError) {
         console.error("Error creating notification for reporter:", notifError);
@@ -256,19 +337,19 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
+        const notificationMessage = `Issue "${issue.title.substring(0, 80)}" verification status changed from ${oldStatusLabel} to ${newStatusLabel}.`;
+
         for (const followerId of followerIds) {
           const profile = profiles?.find(p => p.user_id === followerId);
           const wantsEmail = profile?.notification_email !== false;
 
-          const { error: followerNotifError } = await supabase
-            .from("notifications")
-            .insert([{
-              user_id: followerId,
-              issue_id: issue_id,
-              title: "Issue You Follow - Verification Update",
-              message: notificationMessage,
-              type: `verification_${new_status}`,
-            }]);
+          const { error: followerNotifError } = await supabase.rpc('insert_notification', {
+            p_user_id: followerId,
+            p_issue_id: issue_id,
+            p_title: "Issue You Follow - Verification Update",
+            p_message: notificationMessage,
+            p_type: `verification_${new_status}`,
+          });
 
           if (followerNotifError) {
             console.error(`Error creating notification for follower ${followerId}:`, followerNotifError);
@@ -281,7 +362,7 @@ const handler = async (req: Request): Promise<Response> => {
             if (followerEmail && !emailsSent.includes(followerEmail)) {
               try {
                 const emailHtml = generateEmailHtml(issue, new_status, newStatusLabel, verifier_name, verifier_role, true);
-                const result = await sendEmail(followerEmail, `Verification Update: ${issue.title}`, emailHtml);
+                const result = await sendEmail(followerEmail, `Verification Update: ${issue.title.substring(0, 50)}`, emailHtml);
                 if (result) {
                   emailsSent.push(followerEmail);
                   console.log(`Email sent to follower ${followerId}:`, result);
