@@ -23,19 +23,14 @@ export function useCreateAdminInvite() {
 
   return useMutation({
     mutationFn: async (email: string) => {
-      // Generate a secure invite token
-      const inviteToken = crypto.randomUUID();
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.from('admin_invites').insert([
-        {
-          email,
-          invite_token: inviteToken,
-          invited_by: user.id,
-        },
-      ]);
+      // Use server-side function to generate token securely
+      const { data, error } = await supabase.rpc('generate_admin_invite', {
+        p_email: email,
+        p_invited_by: user.id,
+      });
 
       if (error) {
         if (error.code === '23505') {
@@ -44,7 +39,11 @@ export function useCreateAdminInvite() {
         throw error;
       }
 
-      return inviteToken;
+      if (!data || data.length === 0) {
+        throw new Error('Failed to generate invite');
+      }
+
+      return data[0].invite_token;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-invites'] });
@@ -88,20 +87,18 @@ export async function validateInviteToken(token: string): Promise<AdminInvite | 
 }
 
 export async function useInviteToken(token: string, userId: string): Promise<boolean> {
-  // Mark invite as used
-  const { error: updateError } = await supabase
-    .from('admin_invites')
-    .update({ used: true, used_at: new Date().toISOString() })
-    .eq('invite_token', token);
+  // Use atomic server-side function to prevent race conditions
+  const { data, error } = await supabase.rpc('consume_admin_invite', {
+    p_token: token,
+    p_user_id: userId,
+  });
 
-  if (updateError) return false;
+  if (error) {
+    console.error('Error consuming invite:', error);
+    return false;
+  }
 
-  // Add admin role to user
-  const { error: roleError } = await supabase
-    .from('user_roles')
-    .insert([{ user_id: userId, role: 'admin' }]);
-
-  if (roleError && roleError.code !== '23505') return false;
-  
-  return true;
+  // Type-safe access to JSONB response
+  const result = data as { success?: boolean } | null;
+  return result?.success === true;
 }

@@ -104,6 +104,13 @@ export type Database = {
             referencedRelation: "issues"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "issue_comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       issue_follows: {
@@ -133,6 +140,13 @@ export type Database = {
             referencedRelation: "issues"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "issue_follows_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       issue_upvotes: {
@@ -160,6 +174,13 @@ export type Database = {
             columns: ["issue_id"]
             isOneToOne: false
             referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issue_upvotes_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
             referencedColumns: ["id"]
           },
         ]
@@ -295,6 +316,13 @@ export type Database = {
             referencedRelation: "issues"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -425,13 +453,119 @@ export type Database = {
             referencedRelation: "issues"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "verification_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      issues_public: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          issue_type: Database["public"]["Enums"]["issue_type"] | null
+          latitude: number | null
+          longitude: number | null
+          priority: Database["public"]["Enums"]["issue_priority"] | null
+          reporter_id: string | null
+          resolved_at: string | null
+          resolved_image_url: string | null
+          status: Database["public"]["Enums"]["issue_status"] | null
+          terms_accepted: boolean | null
+          title: string | null
+          updated_at: string | null
+          verification_notes: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          issue_type?: Database["public"]["Enums"]["issue_type"] | null
+          latitude?: number | null
+          longitude?: number | null
+          priority?: Database["public"]["Enums"]["issue_priority"] | null
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_image_url?: string | null
+          status?: Database["public"]["Enums"]["issue_status"] | null
+          terms_accepted?: boolean | null
+          title?: string | null
+          updated_at?: string | null
+          verification_notes?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          issue_type?: Database["public"]["Enums"]["issue_type"] | null
+          latitude?: number | null
+          longitude?: number | null
+          priority?: Database["public"]["Enums"]["issue_priority"] | null
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_image_url?: string | null
+          status?: Database["public"]["Enums"]["issue_status"] | null
+          terms_accepted?: boolean | null
+          title?: string | null
+          updated_at?: string | null
+          verification_notes?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      consume_admin_invite: {
+        Args: { p_token: string; p_user_id: string }
+        Returns: Json
+      }
+      generate_admin_invite: {
+        Args: { p_email: string; p_invited_by: string }
+        Returns: {
+          invite_id: string
+          invite_token: string
+        }[]
+      }
       get_user_department_ids: { Args: { _user_id: string }; Returns: string[] }
       has_role: {
         Args: {
