@@ -47,6 +47,9 @@ export default function AuthorityAuth() {
         return;
       }
 
+      // Clear token from URL immediately to prevent exposure in browser history/logs
+      window.history.replaceState({}, '', '/authority');
+
       const invite = await validateInviteToken(inviteToken);
       if (invite) {
         setIsValidToken(true);
