@@ -9,6 +9,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
+// Valid status values for issue status
+const VALID_ISSUE_STATUSES = ["pending", "in_progress", "resolved", "withdrawn"] as const;
+type IssueStatus = typeof VALID_ISSUE_STATUSES[number];
+
+// UUID regex pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface NotifyStatusChangeRequest {
   issue_id: string;
   old_status: string;
@@ -21,6 +28,37 @@ const statusLabels: Record<string, string> = {
   resolved: "Resolved",
   withdrawn: "Withdrawn",
 };
+
+// Input validation functions
+function isValidUUID(value: unknown): value is string {
+  return typeof value === "string" && UUID_REGEX.test(value);
+}
+
+function isValidIssueStatus(value: unknown): value is IssueStatus {
+  return typeof value === "string" && VALID_ISSUE_STATUSES.includes(value as IssueStatus);
+}
+
+function validateRequest(body: unknown): { valid: true; data: NotifyStatusChangeRequest } | { valid: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { valid: false, error: "Request body must be an object" };
+  }
+
+  const { issue_id, old_status, new_status } = body as Record<string, unknown>;
+
+  if (!isValidUUID(issue_id)) {
+    return { valid: false, error: "issue_id must be a valid UUID" };
+  }
+
+  if (!isValidIssueStatus(old_status)) {
+    return { valid: false, error: `old_status must be one of: ${VALID_ISSUE_STATUSES.join(", ")}` };
+  }
+
+  if (!isValidIssueStatus(new_status)) {
+    return { valid: false, error: `new_status must be one of: ${VALID_ISSUE_STATUSES.join(", ")}` };
+  }
+
+  return { valid: true, data: { issue_id, old_status, new_status } };
+}
 
 const generateEmailHtml = (issue: any, newStatus: string, newStatusLabel: string, isFollower: boolean = false) => `
 <!DOCTYPE html>
@@ -56,11 +94,11 @@ const generateEmailHtml = (issue: any, newStatus: string, newStatusLabel: string
       ` : ''}
       <h2 style="margin-top: 0;">${isFollower ? 'An issue you follow has been updated!' : 'Your issue has been updated!'}</h2>
       <div class="issue-card">
-        <h3 style="margin-top: 0;">${issue.title}</h3>
-        <p style="color: #6b7280; margin-bottom: 15px;">${issue.description.substring(0, 150)}${issue.description.length > 150 ? '...' : ''}</p>
-        ${issue.address ? `<p style="font-size: 14px; color: #6b7280;">📍 ${issue.address}</p>` : ''}
+        <h3 style="margin-top: 0;">${escapeHtml(issue.title)}</h3>
+        <p style="color: #6b7280; margin-bottom: 15px;">${escapeHtml(issue.description.substring(0, 150))}${issue.description.length > 150 ? '...' : ''}</p>
+        ${issue.address ? `<p style="font-size: 14px; color: #6b7280;">📍 ${escapeHtml(issue.address)}</p>` : ''}
         <p><strong>New Status:</strong></p>
-        <span class="status-badge status-${newStatus}">${newStatusLabel}</span>
+        <span class="status-badge status-${newStatus}">${escapeHtml(newStatusLabel)}</span>
       </div>
       <p>Thank you for helping improve our city! We appreciate your patience and engagement.</p>
     </div>
@@ -72,6 +110,18 @@ const generateEmailHtml = (issue: any, newStatus: string, newStatusLabel: string
 </body>
 </html>
 `;
+
+// HTML escape function to prevent XSS
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char] || char);
+}
 
 const sendEmail = async (to: string, subject: string, html: string) => {
   if (!RESEND_API_KEY) {
@@ -144,7 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    let parsedBody: NotifyStatusChangeRequest;
+    let parsedBody: unknown;
     try {
       parsedBody = JSON.parse(body);
     } catch (parseError) {
@@ -155,7 +205,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { issue_id, old_status, new_status } = parsedBody;
+    // Validate input with strict schema validation
+    const validationResult = validateRequest(parsedBody);
+    if (!validationResult.valid) {
+      console.error("Validation error:", validationResult.error);
+      return new Response(
+        JSON.stringify({ error: validationResult.error }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { issue_id, old_status, new_status } = validationResult.data;
     
     console.log(`Processing status change for issue ${issue_id}: ${old_status} -> ${new_status}`);
 
@@ -177,23 +237,20 @@ const handler = async (req: Request): Promise<Response> => {
     const newStatusLabel = statusLabels[new_status] || new_status;
     const oldStatusLabel = statusLabels[old_status] || old_status;
     const notificationTitle = `Issue Status Updated: ${newStatusLabel}`;
-    const notificationMessage = `Issue "${issue.title}" has been updated from ${oldStatusLabel} to ${newStatusLabel}.`;
 
     const emailsSent: string[] = [];
     const notificationsCreated: string[] = [];
 
-    // 1. Notify the reporter
+    // 1. Notify the reporter using the secure RPC function
     if (issue.reporter_id) {
-      // Create in-app notification for reporter
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert([{
-          user_id: issue.reporter_id,
-          issue_id: issue_id,
-          title: notificationTitle,
-          message: `Your issue "${issue.title}" has been updated from ${oldStatusLabel} to ${newStatusLabel}.`,
-          type: `status_${new_status}`,
-        }]);
+      // Create in-app notification for reporter using RPC
+      const { error: notifError } = await supabase.rpc('insert_notification', {
+        p_user_id: issue.reporter_id,
+        p_issue_id: issue_id,
+        p_title: notificationTitle,
+        p_message: `Your issue "${issue.title.substring(0, 100)}" has been updated from ${oldStatusLabel} to ${newStatusLabel}.`,
+        p_type: `status_${new_status}`,
+      });
 
       if (notifError) {
         console.error("Error creating notification for reporter:", notifError);
@@ -252,22 +309,22 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
+        const notificationMessage = `Issue "${issue.title.substring(0, 100)}" has been updated from ${oldStatusLabel} to ${newStatusLabel}.`;
+
         // Create notifications and send emails to followers
         for (const followerId of followerIds) {
           // Check if user wants email notifications
           const profile = profiles?.find(p => p.user_id === followerId);
           const wantsEmail = profile?.notification_email !== false;
 
-          // Create in-app notification
-          const { error: followerNotifError } = await supabase
-            .from("notifications")
-            .insert([{
-              user_id: followerId,
-              issue_id: issue_id,
-              title: "Issue You Follow Updated",
-              message: notificationMessage,
-              type: `status_${new_status}`,
-            }]);
+          // Create in-app notification using RPC
+          const { error: followerNotifError } = await supabase.rpc('insert_notification', {
+            p_user_id: followerId,
+            p_issue_id: issue_id,
+            p_title: "Issue You Follow Updated",
+            p_message: notificationMessage,
+            p_type: `status_${new_status}`,
+          });
 
           if (followerNotifError) {
             console.error(`Error creating notification for follower ${followerId}:`, followerNotifError);
@@ -281,7 +338,7 @@ const handler = async (req: Request): Promise<Response> => {
             if (followerEmail && !emailsSent.includes(followerEmail)) {
               try {
                 const emailHtml = generateEmailHtml(issue, new_status, newStatusLabel, true);
-                const result = await sendEmail(followerEmail, `Issue Update: ${issue.title}`, emailHtml);
+                const result = await sendEmail(followerEmail, `Issue Update: ${issue.title.substring(0, 50)}`, emailHtml);
                 if (result) {
                   emailsSent.push(followerEmail);
                   console.log(`Email sent to follower ${followerId}:`, result);
