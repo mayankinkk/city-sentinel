@@ -1,73 +1,99 @@
-# Welcome to your Lovable project
+# 🏙️ City Sentinel
 
-## Project info
+A civic issue reporting platform to help improve your city by reporting potholes, broken streetlights, drainage issues and more.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Report. Resolve. Improve.**
 
-## How can I edit this code?
+## 🛠️ Tech Stack
 
-There are several ways of editing your application.
+### Frontend
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Shadcn/UI
+- Lucide Icons
+- React Router
 
-**Use Lovable**
+### Backend / Services
+- Supabase (Auth, Database, Storage)
+- PostgreSQL
+- Row Level Security (RLS)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Maps & Visualization
+- Leaflet
+- React-Leaflet
 
-Changes made via Lovable will be committed automatically to this repo.
+## 📁 Project Structure
 
-**Use your preferred IDE**
+```
+city-sentinel/
+├── public/
+│   └── favicon.ico
+├── src/
+│   ├── assets/
+│   ├── components/
+│   │   ├── layout/
+│   │   ├── dashboard/
+│   │   ├── notifications/
+│   ├── pages/
+│   ├── hooks/
+│   ├── lib/
+│   ├── types/
+│   ├── App.tsx
+│   └── main.tsx
+├── supabase/
+├── index.html
+├── package.json
+└── README.md
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## ⚙️ Installation & Setup
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 1️⃣ Clone the repository
 
-Follow these steps:
+```bash
+git clone https://github.com/mayankinkk/city-sentinel.git
+cd city-sentinel
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 2️⃣ Install dependencies
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+npm install --legacy-peer-deps
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 3️⃣ Run the development server
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will run at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🔮 Future Enhancements
 
-**Use GitHub Codespaces**
+- AI-based duplicate issue detection
+- Heatmap view for issue density
+- Push notifications
+- SLA-based resolution tracking
+- Mobile app version
+- Integration with municipal systems
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🤝 Contribution
 
-## What technologies are used for this project?
+Contributions are welcome!
 
-This project is built with:
+Feel free to fork the repository, create a feature branch, and submit a pull request.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 📜 License
 
-## How can I deploy this project?
+This project is open-source and available under the MIT License.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 👨‍💻 Author
 
-## Can I connect a custom domain to my Lovable project?
+**Mayank Sharma**
 
-Yes, you can!
+B.Tech CSE
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Passionate about full-stack development, and building impactful products.
