@@ -443,6 +443,8 @@ export default function Auth() {
             <CardTitle>Verify Your Email</CardTitle>
             <CardDescription>
               Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>
+              <br />
+              <span className="text-muted-foreground text-xs">Can't find it? Please check your spam folder.</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
