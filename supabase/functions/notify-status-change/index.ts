@@ -13,6 +13,9 @@ const corsHeaders = {
 const VALID_ISSUE_STATUSES = ["pending", "in_progress", "resolved", "withdrawn"] as const;
 type IssueStatus = typeof VALID_ISSUE_STATUSES[number];
 
+// Valid admin roles that can trigger notifications
+const ADMIN_ROLES = ["admin", "super_admin", "moderator", "department_admin", "field_worker"] as const;
+
 // UUID regex pattern for validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -172,6 +175,46 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // ============================================
+    // AUTHENTICATION CHECK - Verify caller identity
+    // ============================================
+    const authHeader = req.headers.get("authorization");
+    
+    if (!authHeader) {
+      console.error("Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create a client with the user's auth token to verify identity
+    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseAnon) {
+      console.error("Missing SUPABASE_ANON_KEY");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    
+    if (authError || !user) {
+      console.error("Authentication failed:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - invalid or expired token" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
+
+    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let body: string;
@@ -233,6 +276,29 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // ============================================
+    // AUTHORIZATION CHECK - Verify user can trigger notifications
+    // ============================================
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const hasAdminRole = userRoles?.some(r => 
+      ADMIN_ROLES.includes(r.role as typeof ADMIN_ROLES[number])
+    );
+    const isReporter = issue.reporter_id === user.id;
+
+    if (!hasAdminRole && !isReporter) {
+      console.error(`User ${user.id} lacks permission to trigger notifications for issue ${issue_id}`);
+      return new Response(
+        JSON.stringify({ error: "Forbidden: insufficient permissions to trigger notifications" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`Authorization passed - hasAdminRole: ${hasAdminRole}, isReporter: ${isReporter}`);
 
     const newStatusLabel = statusLabels[new_status] || new_status;
     const oldStatusLabel = statusLabels[old_status] || old_status;
@@ -366,7 +432,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in notify-status-change function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

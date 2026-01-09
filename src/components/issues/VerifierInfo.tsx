@@ -29,10 +29,10 @@ export function VerifierInfo({ verifiedBy, verifiedAt }: VerifierInfoProps) {
   const { data: verifierData, isLoading } = useQuery({
     queryKey: ['verifier', verifiedBy],
     queryFn: async (): Promise<VerifierData> => {
-      // Fetch profile and roles in parallel
+      // Fetch profile (using public view for non-PII) and roles in parallel
       const [profileResult, rolesResult] = await Promise.all([
         supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('full_name')
           .eq('user_id', verifiedBy)
           .maybeSingle(),
