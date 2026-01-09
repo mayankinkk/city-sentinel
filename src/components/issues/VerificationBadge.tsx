@@ -40,9 +40,10 @@ export function VerificationBadge({ status, verifiedBy, verifiedAt }: Verificati
   const { data: verifierData } = useQuery({
     queryKey: ['verifier-badge', verifiedBy],
     queryFn: async (): Promise<VerifierData> => {
+      // Use public view for non-PII profile data
       const [profileResult, rolesResult] = await Promise.all([
         supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('full_name')
           .eq('user_id', verifiedBy!)
           .maybeSingle(),

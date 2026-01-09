@@ -19,10 +19,10 @@ export function useComments(issueId: string) {
 
       if (error) throw error;
       
-      // Fetch profiles for comment authors
+      // Fetch profiles for comment authors using public view (only non-PII fields)
       const userIds = [...new Set(data.map(c => c.user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('user_id, full_name, avatar_url')
         .in('user_id', userIds);
 

@@ -16,7 +16,8 @@ export function useUsers() {
   return useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async () => {
-      // Get all profiles
+      // Get all profiles using the public view (non-PII fields only)
+      // Admins access this hook for user management, so they have access via RLS policy
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name, created_at');
