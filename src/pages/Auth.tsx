@@ -471,7 +471,7 @@ export default function Auth() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center animate-pulse">
                 <MailCheck className="w-10 h-10 text-primary" />
               </div>
               <p className="text-center text-muted-foreground">Click the link in your email to verify your account.</p>
