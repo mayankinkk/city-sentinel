@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned } from 'lucide-react';
+import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const OTP_RESEND_COOLDOWN = 60; // seconds
@@ -448,8 +448,11 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="text-center text-muted-foreground">
-              <p>Click the link in your email to verify your account.</p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <MailCheck className="w-10 h-10 text-primary" />
+              </div>
+              <p className="text-center text-muted-foreground">Click the link in your email to verify your account.</p>
             </div>
 
             <div className="text-center">
