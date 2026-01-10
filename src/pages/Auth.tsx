@@ -11,10 +11,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned, MailCheck } from 'lucide-react';
+import { MapPin, Loader2, Mail, Lock, ArrowLeft, User, MapPinned, MailCheck, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 const OTP_RESEND_COOLDOWN = 60; // seconds
+
+const getEmailProviderUrl = (email: string): string | null => {
+  const domain = email.split('@')[1]?.toLowerCase();
+  const providerUrls: Record<string, string> = {
+    'gmail.com': 'https://mail.google.com',
+    'googlemail.com': 'https://mail.google.com',
+    'yahoo.com': 'https://mail.yahoo.com',
+    'yahoo.co.uk': 'https://mail.yahoo.com',
+    'outlook.com': 'https://outlook.live.com',
+    'hotmail.com': 'https://outlook.live.com',
+    'live.com': 'https://outlook.live.com',
+    'msn.com': 'https://outlook.live.com',
+    'icloud.com': 'https://www.icloud.com/mail',
+    'me.com': 'https://www.icloud.com/mail',
+    'mac.com': 'https://www.icloud.com/mail',
+    'protonmail.com': 'https://mail.proton.me',
+    'proton.me': 'https://mail.proton.me',
+    'zoho.com': 'https://mail.zoho.com',
+    'aol.com': 'https://mail.aol.com',
+  };
+  return providerUrls[domain] || null;
+};
 
 const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -454,6 +476,19 @@ export default function Auth() {
               </div>
               <p className="text-center text-muted-foreground">Click the link in your email to verify your account.</p>
             </div>
+
+            {getEmailProviderUrl(email) && (
+              <Button
+                type="button"
+                variant="hero"
+                size="lg"
+                className="w-full gap-2"
+                onClick={() => window.open(getEmailProviderUrl(email)!, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Check My Inbox
+              </Button>
+            )}
 
             <div className="text-center">
               <Button
