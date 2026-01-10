@@ -448,34 +448,9 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={otpCode}
-                onChange={(value) => setOtpCode(value)}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+            <div className="text-center text-muted-foreground">
+              <p>Click the link in your email to verify your account.</p>
             </div>
-
-            <Button
-              type="button"
-              variant="hero"
-              size="lg"
-              className="w-full"
-              disabled={isLoading || otpCode.length !== 6}
-              onClick={onVerifyOtp}
-            >
-              {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Verify Code
-            </Button>
 
             <div className="text-center">
               <Button
@@ -486,8 +461,8 @@ export default function Auth() {
                 onClick={resendOtp}
               >
                 {resendCooldown > 0 
-                  ? `Resend code in ${resendCooldown}s` 
-                  : "Didn't receive the code? Resend"}
+                  ? `Resend link in ${resendCooldown}s` 
+                  : "Didn't receive the email? Resend"}
               </Button>
             </div>
           </CardContent>
