@@ -441,10 +441,10 @@ export default function Auth() {
               Back
             </Button>
             <CardTitle>Verify Your Email</CardTitle>
-            <CardDescription>
-              Enter the 6-digit code sent to <span className="font-medium text-foreground">{email}</span>
+            <CardDescription className="space-y-1">
+              <span>A magic link has been sent to <span className="font-medium text-foreground">{email}</span></span>
               <br />
-              <span className="text-muted-foreground text-xs">Can't find it? Please check your spam folder.</span>
+              <span className="text-muted-foreground text-xs">Please also check your spam messages.</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
