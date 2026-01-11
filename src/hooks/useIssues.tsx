@@ -27,8 +27,8 @@ type DbIssue = {
   resolved_at: string | null;
 };
 
-// Type for public issue data (without sensitive fields like reporter_email)
-type DbIssuePublic = Omit<DbIssue, 'reporter_email'>;
+// Type for public issue data (without sensitive fields like reporter_email and reporter_id)
+type DbIssuePublic = Omit<DbIssue, 'reporter_email' | 'reporter_id'> & { reporter_id: string | null };
 
 const mapDbIssueToIssue = (dbIssue: DbIssue | DbIssuePublic): Issue => ({
   id: dbIssue.id,
@@ -57,26 +57,33 @@ export function useIssues() {
   return useQuery({
     queryKey: ['issues'],
     queryFn: async (): Promise<Issue[]> => {
-      // First try to get from the full issues table (for privileged users)
+      // First try to get from the full issues table (for privileged users or issue owners)
       const { data, error } = await supabase
         .from('issues')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // If user has access to full table, return that data
+      // If user has access to full table and got data, return that
       if (!error && data && data.length > 0) {
         return (data as DbIssue[]).map(mapDbIssueToIssue);
       }
 
-      // Fall back to public view for non-privileged users
-      // This view excludes sensitive data like reporter_email
+      // If there was an error or no data (could be RLS blocking), use the public RPC function
+      // This function is SECURITY DEFINER and bypasses RLS to return public issue data
       const { data: publicData, error: publicError } = await supabase
-        .from('issues_public')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .rpc('get_public_issues');
 
-      if (publicError) throw publicError;
-      return (publicData as DbIssuePublic[]).map(mapDbIssueToIssue);
+      if (publicError) {
+        console.error('Failed to fetch public issues:', publicError);
+        return [];
+      }
+      
+      // Map the RPC result which doesn't include reporter_email or reporter_id
+      return (publicData || []).map((issue: any) => mapDbIssueToIssue({
+        ...issue,
+        reporter_id: null,
+        reporter_email: null,
+      } as DbIssue));
     },
   });
 }
@@ -97,15 +104,23 @@ export function useIssue(id: string) {
         return mapDbIssueToIssue(data as DbIssue);
       }
 
-      // Fall back to public view for non-privileged users
+      // Fall back to public RPC function for non-privileged users
       const { data: publicData, error: publicError } = await supabase
-        .from('issues_public')
-        .select('*')
-        .eq('id', id)
-        .single();
+        .rpc('get_public_issues');
 
       if (publicError) throw publicError;
-      return mapDbIssueToIssue(publicData as DbIssuePublic);
+      
+      // Find the specific issue from the results
+      const issue = (publicData || []).find((i: any) => i.id === id);
+      if (!issue) {
+        throw new Error('Issue not found');
+      }
+      
+      return mapDbIssueToIssue({
+        ...issue,
+        reporter_id: null,
+        reporter_email: null,
+      } as DbIssue);
     },
     enabled: !!id,
   });
