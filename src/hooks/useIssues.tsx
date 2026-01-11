@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Issue, IssueType, IssuePriority, IssueStatus, VerificationStatus } from '@/types/issue';
 import { toast } from 'sonner';
 
+// Type for full issue data (accessible to privileged users)
 type DbIssue = {
   id: string;
   title: string;
@@ -26,7 +27,10 @@ type DbIssue = {
   resolved_at: string | null;
 };
 
-const mapDbIssueToIssue = (dbIssue: DbIssue): Issue => ({
+// Type for public issue data (without sensitive fields like reporter_email)
+type DbIssuePublic = Omit<DbIssue, 'reporter_email'>;
+
+const mapDbIssueToIssue = (dbIssue: DbIssue | DbIssuePublic): Issue => ({
   id: dbIssue.id,
   title: dbIssue.title,
   description: dbIssue.description,
@@ -39,7 +43,7 @@ const mapDbIssueToIssue = (dbIssue: DbIssue): Issue => ({
   image_url: dbIssue.image_url ?? undefined,
   resolved_image_url: dbIssue.resolved_image_url ?? undefined,
   reporter_id: dbIssue.reporter_id ?? undefined,
-  reporter_email: dbIssue.reporter_email ?? undefined,
+  reporter_email: 'reporter_email' in dbIssue ? (dbIssue.reporter_email ?? undefined) : undefined,
   verification_status: (dbIssue.verification_status as VerificationStatus) ?? undefined,
   verified_by: dbIssue.verified_by ?? undefined,
   verified_at: dbIssue.verified_at ?? undefined,
@@ -53,13 +57,26 @@ export function useIssues() {
   return useQuery({
     queryKey: ['issues'],
     queryFn: async (): Promise<Issue[]> => {
+      // First try to get from the full issues table (for privileged users)
       const { data, error } = await supabase
         .from('issues')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data as DbIssue[]).map(mapDbIssueToIssue);
+      // If user has access to full table, return that data
+      if (!error && data && data.length > 0) {
+        return (data as DbIssue[]).map(mapDbIssueToIssue);
+      }
+
+      // Fall back to public view for non-privileged users
+      // This view excludes sensitive data like reporter_email
+      const { data: publicData, error: publicError } = await supabase
+        .from('issues_public')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (publicError) throw publicError;
+      return (publicData as DbIssuePublic[]).map(mapDbIssueToIssue);
     },
   });
 }
@@ -68,14 +85,27 @@ export function useIssue(id: string) {
   return useQuery({
     queryKey: ['issue', id],
     queryFn: async (): Promise<Issue> => {
+      // Try full table first (for privileged users or issue owners)
       const { data, error } = await supabase
         .from('issues')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      return mapDbIssueToIssue(data as DbIssue);
+      // If user has access to full table, return that data
+      if (!error && data) {
+        return mapDbIssueToIssue(data as DbIssue);
+      }
+
+      // Fall back to public view for non-privileged users
+      const { data: publicData, error: publicError } = await supabase
+        .from('issues_public')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (publicError) throw publicError;
+      return mapDbIssueToIssue(publicData as DbIssuePublic);
     },
     enabled: !!id,
   });
