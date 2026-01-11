@@ -503,7 +503,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           priority?: Database["public"]["Enums"]["issue_priority"] | null
-          reporter_id?: string | null
+          reporter_id?: never
           resolved_at?: string | null
           resolved_image_url?: string | null
           status?: Database["public"]["Enums"]["issue_status"] | null
@@ -529,7 +529,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           priority?: Database["public"]["Enums"]["issue_priority"] | null
-          reporter_id?: string | null
+          reporter_id?: never
           resolved_at?: string | null
           resolved_image_url?: string | null
           status?: Database["public"]["Enums"]["issue_status"] | null
@@ -585,6 +585,32 @@ export type Database = {
         Returns: {
           invite_id: string
           invite_token: string
+        }[]
+      }
+      get_public_issues: {
+        Args: never
+        Returns: {
+          address: string
+          assigned_to: string
+          created_at: string
+          department_id: string
+          description: string
+          id: string
+          image_url: string
+          issue_type: Database["public"]["Enums"]["issue_type"]
+          latitude: number
+          longitude: number
+          priority: Database["public"]["Enums"]["issue_priority"]
+          resolved_at: string
+          resolved_image_url: string
+          status: Database["public"]["Enums"]["issue_status"]
+          terms_accepted: boolean
+          title: string
+          updated_at: string
+          verification_notes: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          verified_at: string
+          verified_by: string
         }[]
       }
       get_user_department_ids: { Args: { _user_id: string }; Returns: string[] }
