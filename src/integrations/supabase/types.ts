@@ -149,6 +149,102 @@ export type Database = {
           },
         ]
       }
+      issue_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_type: string
+          image_url: string
+          issue_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_type?: string
+          image_url: string
+          issue_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_type?: string
+          image_url?: string
+          issue_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_images_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issue_images_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issue_status_history: {
+        Row: {
+          changed_by: string | null
+          changed_by_name: string | null
+          changed_by_role: string | null
+          created_at: string
+          id: string
+          issue_id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          changed_by_role?: string | null
+          created_at?: string
+          id?: string
+          issue_id: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          changed_by_name?: string | null
+          changed_by_role?: string | null
+          created_at?: string
+          id?: string
+          issue_id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_status_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issue_status_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "issues_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issue_upvotes: {
         Row: {
           created_at: string
