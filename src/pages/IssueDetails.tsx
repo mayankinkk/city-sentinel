@@ -241,7 +241,8 @@ export default function IssueDetails() {
     );
   }
 
-  const isOwner = user?.id === issue.reporter_id;
+  // User must be logged in AND their ID must match the reporter_id
+  const isOwner = user && issue.reporter_id && user.id === issue.reporter_id;
 
   // Role-based permission helpers
   const getRoleBadge = () => {
