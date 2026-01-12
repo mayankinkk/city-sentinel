@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { useIssues } from '@/hooks/useIssues';
 import { IssueCard } from '@/components/issues/IssueCard';
 import { AdvancedFilters } from '@/components/issues/AdvancedFilters';
+import { ExportReports } from '@/components/issues/ExportReports';
+import { IssueGridSkeleton } from '@/components/ui/skeleton-loaders';
 import { Button } from '@/components/ui/button';
 import { IssueStatus, IssuePriority, IssueType } from '@/types/issue';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Loader2, FileX } from 'lucide-react';
+import { Plus, FileX } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
 export default function Issues() {
@@ -69,14 +71,19 @@ export default function Issues() {
               {isLoading ? 'Loading...' : `${filteredIssues.length} issues found`}
             </p>
           </div>
-          {user && (
-            <Link to="/report">
-              <Button variant="hero" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Report Issue
-              </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {!isLoading && filteredIssues.length > 0 && (
+              <ExportReports issues={filteredIssues} />
+            )}
+            {user && (
+              <Link to="/report">
+                <Button variant="hero" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Report Issue
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Advanced Filters */}
@@ -102,9 +109,7 @@ export default function Issues() {
 
         {/* Issues Grid */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <IssueGridSkeleton count={6} />
         ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <FileX className="h-16 w-16 text-muted-foreground/50 mb-4" />

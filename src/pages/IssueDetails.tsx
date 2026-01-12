@@ -4,6 +4,8 @@ import { useIssue, useUpdateIssue, useDeleteIssue, useVerifyIssue } from '@/hook
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useAddVerificationHistory } from '@/hooks/useVerificationHistory';
+import { useAddStatusHistory } from '@/hooks/useStatusHistory';
+import { useIssueImages, useAddIssueImage } from '@/hooks/useIssueImages';
 import { StatusBadge } from '@/components/issues/StatusBadge';
 import { PriorityBadge } from '@/components/issues/PriorityBadge';
 import { VerificationBadge } from '@/components/issues/VerificationBadge';
@@ -13,12 +15,16 @@ import { BeforeAfterSlider } from '@/components/issues/BeforeAfterSlider';
 import { ReporterInfo } from '@/components/issues/ReporterInfo';
 import { VerifierInfo } from '@/components/issues/VerifierInfo';
 import { VerificationHistory } from '@/components/issues/VerificationHistory';
+import { ImageGallery } from '@/components/issues/ImageGallery';
+import { StatusTimeline } from '@/components/issues/StatusTimeline';
+import { IssueDetailsSkeleton } from '@/components/ui/skeleton-loaders';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   issueTypeLabels, 
   issueTypeIcons, 
@@ -48,7 +54,9 @@ import {
   Eye,
   AlertTriangle,
   History,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  ImagePlus
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
@@ -61,10 +69,13 @@ export default function IssueDetails() {
   const { data: issue, isLoading, error } = useIssue(id || '');
   const { user, userRoles } = useAuth();
   const { data: profile } = useProfile();
+  const { data: issueImages } = useIssueImages(id || '');
   const updateIssue = useUpdateIssue();
   const deleteIssue = useDeleteIssue();
   const verifyIssue = useVerifyIssue();
   const addVerificationHistory = useAddVerificationHistory();
+  const addStatusHistory = useAddStatusHistory();
+  const addIssueImage = useAddIssueImage();
   const [isTestingNotification, setIsTestingNotification] = useState(false);
   const [isUploadingResolvedImage, setIsUploadingResolvedImage] = useState(false);
   const [verificationNotes, setVerificationNotes] = useState('');
@@ -149,12 +160,31 @@ export default function IssueDetails() {
   };
 
   const handleStatusChange = async (newStatus: IssueStatus) => {
-    if (!issue) return;
+    if (!issue || !user) return;
+    
+    const oldStatus = issue.status;
+    
+    // Determine role for history
+    let userRole = 'user';
+    if (userRoles.isSuperAdmin) userRole = 'super_admin';
+    else if (userRoles.isAdmin) userRole = 'admin';
+    else if (userRoles.isDepartmentAdmin) userRole = 'department_admin';
+    else if (userRoles.isModerator) userRole = 'moderator';
     
     await updateIssue.mutateAsync({
       id: issue.id,
       status: newStatus,
       resolved_at: newStatus === 'resolved' ? new Date().toISOString() : null,
+    });
+    
+    // Add to status history
+    await addStatusHistory.mutateAsync({
+      issue_id: issue.id,
+      old_status: oldStatus,
+      new_status: newStatus,
+      changed_by: user.id,
+      changed_by_name: profile?.full_name || undefined,
+      changed_by_role: userRole,
     });
   };
 
@@ -222,11 +252,7 @@ export default function IssueDetails() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <IssueDetailsSkeleton />;
   }
 
   if (error || !issue) {

@@ -6,15 +6,15 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { AdminInviteManager } from '@/components/admin/AdminInviteManager';
 import { DepartmentManager } from '@/components/admin/DepartmentManager';
 import { BulkActionsManager } from '@/components/dashboard/BulkActionsManager';
+import { DashboardSkeleton } from '@/components/ui/skeleton-loaders';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { issueTypeLabels, IssueType, IssueStatus } from '@/types/issue';
+import { issueTypeLabels, IssueType } from '@/types/issue';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
   FileText, 
   Clock, 
-  Loader2, 
   CheckCircle, 
   AlertTriangle, 
   TrendingUp, 
@@ -56,11 +56,7 @@ export default function Dashboard() {
   }, [hasAccess, loading, navigate]);
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!hasAccess) {
@@ -313,7 +309,7 @@ export default function Dashboard() {
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 rounded-xl bg-status-in-progress/10">
-                      <Loader2 className="h-6 w-6 text-status-in-progress" />
+                      <Clock className="h-6 w-6 text-status-in-progress" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">In Progress</p>
