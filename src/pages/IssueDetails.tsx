@@ -53,6 +53,7 @@ import {
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { stripExifData } from '@/lib/imageUtils';
 
 export default function IssueDetails() {
   const { id } = useParams<{ id: string }>();
@@ -113,13 +114,16 @@ export default function IssueDetails() {
 
     setIsUploadingResolvedImage(true);
     try {
+      // Strip EXIF metadata for privacy (removes GPS, device info, etc.)
+      const strippedImage = await stripExifData(file);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${issue.id}-resolved-${Date.now()}.${fileExt}`;
       const filePath = `resolved/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('issue-images')
-        .upload(filePath, file);
+        .upload(filePath, strippedImage);
 
       if (uploadError) throw uploadError;
 
