@@ -15,7 +15,8 @@ import { IssueType, IssuePriority, issueTypeLabels, issueTypeIcons, priorityLabe
 import { supabase } from '@/integrations/supabase/client';
 import { LocationPicker } from '@/components/map/LocationPicker';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Loader2, AlertTriangle } from 'lucide-react';
+import { Upload, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { stripExifData } from '@/lib/imageUtils';
 import { toast } from 'sonner';
 
 const issueSchema = z.object({
@@ -129,13 +130,16 @@ export function IssueForm() {
   const uploadImage = async (): Promise<string | null> => {
     if (!imageFile) return null;
     
+    // Strip EXIF metadata for privacy (removes GPS, device info, etc.)
+    const strippedImage = await stripExifData(imageFile);
+    
     const fileExt = imageFile.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `issues/${fileName}`;
 
     const { error } = await supabase.storage
       .from('issue-images')
-      .upload(filePath, imageFile);
+      .upload(filePath, strippedImage);
 
     if (error) {
       throw new Error('Failed to upload image');
@@ -319,6 +323,10 @@ export function IssueForm() {
                   </span>
                   <span className="text-xs text-muted-foreground">
                     PNG, JPG up to 5MB
+                  </span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    GPS &amp; device data will be removed
                   </span>
                   <input
                     type="file"
