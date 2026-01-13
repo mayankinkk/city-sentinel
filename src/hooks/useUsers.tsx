@@ -38,6 +38,18 @@ export function useUsers() {
 
       if (deptError) throw deptError;
 
+      // Log profile access for audit trail (admin users only)
+      // This is done asynchronously and doesn't block the query
+      if (profiles && profiles.length > 0) {
+        // Log bulk access with context - fire and forget
+        profiles.forEach(profile => {
+          void supabase.rpc('log_profile_access', { 
+            p_profile_id: profile.user_id,
+            p_context: 'user_management'
+          });
+        });
+      }
+
       // Get auth users emails using a custom approach since we can't query auth.users directly
       // We'll use the profiles and combine with the data we have
       const users: UserWithRoles[] = profiles?.map(profile => {
