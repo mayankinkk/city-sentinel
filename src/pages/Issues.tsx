@@ -13,7 +13,7 @@ import { Helmet } from 'react-helmet-async';
 
 export default function Issues() {
   const { data: issues, isLoading } = useIssues();
-  const { user } = useAuth();
+  const { user, userRoles } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<IssueStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'all'>('all');
@@ -72,7 +72,7 @@ export default function Issues() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {!isLoading && filteredIssues.length > 0 && (
+            {!isLoading && filteredIssues.length > 0 && userRoles.isSuperAdmin && (
               <ExportReports issues={filteredIssues} />
             )}
             {user && (
