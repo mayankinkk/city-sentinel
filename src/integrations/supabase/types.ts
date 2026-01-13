@@ -421,6 +421,30 @@ export type Database = {
           },
         ]
       }
+      profile_access_log: {
+        Row: {
+          access_context: string | null
+          accessed_at: string
+          admin_id: string
+          id: string
+          profile_viewed: string
+        }
+        Insert: {
+          access_context?: string | null
+          accessed_at?: string
+          admin_id: string
+          id?: string
+          profile_viewed: string
+        }
+        Update: {
+          access_context?: string | null
+          accessed_at?: string
+          admin_id?: string
+          id?: string
+          profile_viewed?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -726,6 +750,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      log_profile_access: {
+        Args: { p_context?: string; p_profile_id: string }
+        Returns: undefined
       }
       user_has_department: {
         Args: { _department_id: string; _user_id: string }
