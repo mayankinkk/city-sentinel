@@ -96,4 +96,6 @@ This project is open-source and available under the MIT License.
 
 B.Tech CSE
 
-Passionate about full-stack development, and building impactful products.
+This project was fully designed and developed by Mayank Sharma, passionate about full-stack development and building impactful products.
+
+Deployed with ❤️ using [Lovable](https://lovable.dev)
