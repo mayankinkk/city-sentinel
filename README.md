@@ -4,6 +4,17 @@ A civic issue reporting platform to help improve your city by reporting potholes
 
 **Report. Resolve. Improve.**
 
+## 📸 Screenshots
+
+### Homepage
+![Homepage](public/screenshots/homepage.png)
+
+### Map View
+![Map View](public/screenshots/map-view.png)
+
+### Issues List
+![Issues List](public/screenshots/issues-list.png)
+
 ## 🛠️ Tech Stack
 
 ### Frontend
