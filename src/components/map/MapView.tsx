@@ -177,7 +177,7 @@ export function MapView({
             Reported ${formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })}
           </p>
           ${issue.image_url ? `<img src="${issue.image_url}" alt="Issue" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-top: 8px;" />` : ''}
-          <a href="/issue/${issue.id}" style="
+          <a href="/issues/${issue.id}" style="
             display: block;
             text-align: center;
             padding: 8px 16px;
