@@ -6,6 +6,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { AdminInviteManager } from '@/components/admin/AdminInviteManager';
 import { DepartmentManager } from '@/components/admin/DepartmentManager';
 import { BulkActionsManager } from '@/components/dashboard/BulkActionsManager';
+import { NewReportsPanel } from '@/components/dashboard/NewReportsPanel';
 import { DashboardSkeleton } from '@/components/ui/skeleton-loaders';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,7 +25,8 @@ import {
   Crown,
   UserCog,
   Eye,
-  Building2
+  Building2,
+  Bell
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
@@ -156,8 +158,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="analytics" className="space-y-6">
+        <Tabs defaultValue={showVerification ? "new-reports" : "analytics"} className="space-y-6">
           <TabsList className="flex-wrap h-auto gap-1">
+            {showVerification && (
+              <TabsTrigger value="new-reports" className="gap-2">
+                <Bell className="h-4 w-4" />
+                New Reports
+                {pendingVerificationCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                    {pendingVerificationCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             {showVerification && (
               <TabsTrigger value="verification" className="gap-2">
@@ -184,6 +197,12 @@ export default function Dashboard() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {showVerification && (
+            <TabsContent value="new-reports">
+              <NewReportsPanel />
+            </TabsContent>
+          )}
 
           <TabsContent value="analytics" className="space-y-6">
             {/* Stats Grid */}
