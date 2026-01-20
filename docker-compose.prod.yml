@@ -1,0 +1,174 @@
+# City Sentinel - Production Docker Compose
+# For self-hosted deployment with optional Supabase services
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Frontend Application
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+        - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
+    container_name: city-sentinel-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - city-sentinel-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`city-sentinel.example.com`)"
+
+  # ============================================
+  # PostgreSQL Database (if self-hosting)
+  # ============================================
+  database:
+    image: postgres:15-alpine
+    container_name: city-sentinel-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: city_sentinel
+      POSTGRES_USER: city_sentinel_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./public/city-sentinel-full-migration.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U city_sentinel_admin -d city_sentinel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - city-sentinel-network
+
+  # ============================================
+  # MinIO Object Storage (S3-compatible)
+  # ============================================
+  storage:
+    image: minio/minio:latest
+    container_name: city-sentinel-storage
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - city-sentinel-network
+
+  # ============================================
+  # Redis Cache (optional, for sessions/caching)
+  # ============================================
+  cache:
+    image: redis:7-alpine
+    container_name: city-sentinel-cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - city-sentinel-network
+
+  # ============================================
+  # Nginx Reverse Proxy (production)
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: city-sentinel-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+    networks:
+      - city-sentinel-network
+
+  # ============================================
+  # Certbot for SSL (optional)
+  # ============================================
+  certbot:
+    image: certbot/certbot
+    container_name: city-sentinel-certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  # ============================================
+  # Backup Service
+  # ============================================
+  backup:
+    image: postgres:15-alpine
+    container_name: city-sentinel-backup
+    environment:
+      PGHOST: database
+      PGUSER: city_sentinel_admin
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: city_sentinel
+    volumes:
+      - ./backups:/backups
+    entrypoint: |
+      /bin/sh -c '
+        while true; do
+          pg_dump -Fc > /backups/backup-$$(date +%Y%m%d-%H%M%S).dump
+          find /backups -name "*.dump" -mtime +30 -delete
+          sleep 86400
+        done
+      '
+    depends_on:
+      - database
+    networks:
+      - city-sentinel-network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres-data:
+    driver: local
+  minio-data:
+    driver: local
+  redis-data:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  city-sentinel-network:
+    driver: bridge
