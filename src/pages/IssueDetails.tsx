@@ -17,6 +17,7 @@ import { VerifierInfo } from '@/components/issues/VerifierInfo';
 import { VerificationHistory } from '@/components/issues/VerificationHistory';
 import { ImageGallery } from '@/components/issues/ImageGallery';
 import { StatusTimeline } from '@/components/issues/StatusTimeline';
+import { SocialShare } from '@/components/issues/SocialShare';
 import { IssueDetailsSkeleton } from '@/components/ui/skeleton-loaders';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -454,6 +455,9 @@ export default function IssueDetails() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Social Share */}
+            <SocialShare issueId={issue.id} title={issue.title} />
 
             {/* Upvote and Follow Actions */}
             <IssueActions issueId={issue.id} />
