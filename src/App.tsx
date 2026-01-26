@@ -17,6 +17,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotificationCenter from "./pages/NotificationCenter";
 import UserManagement from "./pages/UserManagement";
+import MyCityDashboard from "./pages/MyCityDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/report" element={<ReportIssue />} />
                 <Route path="/issues/:id" element={<IssueDetails />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/my-dashboard" element={<MyCityDashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/notifications" element={<NotificationCenter />} />
                 <Route path="/admin/users" element={<UserManagement />} />

@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { 
   MapPin, 
   FileText, 
@@ -17,13 +19,15 @@ import {
   Crown,
   UserCog,
   Eye,
-  Building2
+  Building2,
+  LayoutDashboard
 } from 'lucide-react';
 import citySentinelLogo from '@/assets/city-sentinel-logo.png';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
+  const { t } = useTranslation();
   const { user, userRoles, signOut } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,10 +36,11 @@ export function Navbar() {
   const hasDashboardAccess = userRoles.isSuperAdmin || userRoles.isAdmin || userRoles.isDepartmentAdmin || userRoles.isModerator;
 
   const navItems = [
-    { path: '/map', label: 'Map', icon: MapPin },
-    { path: '/issues', label: 'Issues', icon: FileText },
-    ...(hasDashboardAccess ? [{ path: '/dashboard', label: 'Dashboard', icon: BarChart3 }] : []),
-    ...(userRoles.isSuperAdmin ? [{ path: '/admin/users', label: 'Users', icon: Shield }] : []),
+    { path: '/map', label: t('nav.map'), icon: MapPin },
+    { path: '/issues', label: t('nav.issues'), icon: FileText },
+    ...(user && !hasDashboardAccess ? [{ path: '/my-dashboard', label: t('citizenDashboard.title'), icon: LayoutDashboard }] : []),
+    ...(hasDashboardAccess ? [{ path: '/dashboard', label: t('nav.dashboard'), icon: BarChart3 }] : []),
+    ...(userRoles.isSuperAdmin ? [{ path: '/admin/users', label: t('nav.users'), icon: Shield }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -86,6 +91,7 @@ export function Navbar() {
 
           {/* Auth & Report Button */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher />
             <ThemeToggle />
             {user ? (
               <>
@@ -93,7 +99,7 @@ export function Navbar() {
                 <Link to="/report">
                   <Button variant="hero" size="sm" className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Report Issue
+                    {t('nav.reportIssue')}
                   </Button>
                 </Link>
                 {roleBadge && (
@@ -112,14 +118,14 @@ export function Navbar() {
                 </Link>
                 <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
                   <LogOut className="h-4 w-4" />
-                  Sign Out
+                  {t('nav.signOut')}
                 </Button>
               </>
             ) : (
               <Link to="/auth">
                 <Button variant="default" size="sm" className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  Sign In
+                  {t('nav.signIn')}
                 </Button>
               </Link>
             )}
