@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { IssueCard } from '@/components/issues/IssueCard';
-import { Loader2, User, Bell, History, Heart, Save } from 'lucide-react';
+import { Loader2, User, Bell, History, Heart, Save, Languages } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Helmet } from 'react-helmet-async';
 import { format } from 'date-fns';
 
@@ -97,7 +98,7 @@ export default function Profile() {
           </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
               <TabsTrigger value="profile" className="gap-2">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Profile</span>
@@ -113,6 +114,10 @@ export default function Profile() {
               <TabsTrigger value="notifications" className="gap-2">
                 <Bell className="h-4 w-4" />
                 <span className="hidden sm:inline">Notifications</span>
+              </TabsTrigger>
+              <TabsTrigger value="language" className="gap-2">
+                <Languages className="h-4 w-4" />
+                <span className="hidden sm:inline">Language</span>
               </TabsTrigger>
             </TabsList>
 
@@ -282,6 +287,27 @@ export default function Profile() {
                         updateProfile.mutate({ notification_push: checked });
                       }}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Language Tab */}
+            <TabsContent value="language">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Language Settings</CardTitle>
+                  <CardDescription>Choose your preferred language</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Select Language</p>
+                      <p className="text-sm text-muted-foreground">
+                        Change the application language
+                      </p>
+                    </div>
+                    <LanguageSwitcher />
                   </div>
                 </CardContent>
               </Card>

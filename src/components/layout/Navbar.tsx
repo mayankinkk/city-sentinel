@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+
 import { 
   MapPin, 
   FileText, 
@@ -91,7 +91,6 @@ export function Navbar() {
 
           {/* Auth & Report Button */}
           <div className="hidden md:flex items-center gap-3">
-            <LanguageSwitcher />
             <ThemeToggle />
             {user ? (
               <>
