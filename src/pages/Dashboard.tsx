@@ -158,7 +158,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue={showVerification ? "new-reports" : "analytics"} className="space-y-6">
+        <Tabs defaultValue="analytics" className="space-y-6">
           <TabsList className="flex-wrap h-auto gap-1">
             {showVerification && (
               <TabsTrigger value="new-reports" className="gap-2">
