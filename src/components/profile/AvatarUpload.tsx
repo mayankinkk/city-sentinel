@@ -168,9 +168,6 @@ export function AvatarUpload({ userId, currentAvatarUrl, fallback, onUploadCompl
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
-        JPG, PNG or GIF. Max 2MB.
-      </p>
     </div>
   );
 }
