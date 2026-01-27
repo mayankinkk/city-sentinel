@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { IssueCard } from '@/components/issues/IssueCard';
 import { Loader2, User, Bell, History, Heart, Save, Languages } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { Helmet } from 'react-helmet-async';
 import { format } from 'date-fns';
 
@@ -80,15 +81,17 @@ export default function Profile() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Profile Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profile?.avatar_url || undefined} />
-              <AvatarFallback className="text-2xl gradient-hero text-primary-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
+        {/* Profile Header */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
+            <AvatarUpload
+              userId={user.id}
+              currentAvatarUrl={profile?.avatar_url}
+              fallback={initials}
+              onUploadComplete={(url) => {
+                updateProfile.mutate({ avatar_url: url });
+              }}
+            />
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl font-bold">{profile?.full_name || 'User'}</h1>
               <p className="text-muted-foreground">{user.email}</p>
               <p className="text-sm text-muted-foreground">
