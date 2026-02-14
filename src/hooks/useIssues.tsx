@@ -167,6 +167,7 @@ interface UpdateIssueData {
   verified_by?: string;
   verified_at?: string;
   verification_notes?: string;
+  assigned_to?: string;
 }
 
 export function useUpdateIssue() {
