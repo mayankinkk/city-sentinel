@@ -700,6 +700,25 @@ export type Database = {
         Args: { p_token: string; p_user_id: string }
         Returns: Json
       }
+      find_nearby_issues: {
+        Args: {
+          p_latitude: number
+          p_longitude: number
+          p_radius_km?: number
+          p_title: string
+        }
+        Returns: {
+          address: string
+          created_at: string
+          distance_km: number
+          id: string
+          issue_type: Database["public"]["Enums"]["issue_type"]
+          latitude: number
+          longitude: number
+          status: Database["public"]["Enums"]["issue_status"]
+          title: string
+        }[]
+      }
       generate_admin_invite: {
         Args: { p_email: string; p_invited_by: string }
         Returns: {
