@@ -320,6 +320,11 @@ export default function Profile() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Activity Tab */}
+            <TabsContent value="activity">
+              <ActivityFeed />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
