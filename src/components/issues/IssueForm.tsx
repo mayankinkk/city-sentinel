@@ -267,6 +267,7 @@ export function IssueForm() {
               id="title"
               placeholder="Brief description of the issue"
               {...register('title')}
+              onBlur={handleTitleBlur}
             />
             {errors.title && (
               <p className="text-sm text-destructive">{errors.title.message}</p>
