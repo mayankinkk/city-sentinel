@@ -115,6 +115,10 @@ export function IssueForm() {
     }
   };
 
+  const handleAddressChange = (newAddress: string) => {
+    setAddress(newAddress);
+  };
+
   // Check duplicates when title changes significantly
   const handleTitleBlur = useCallback(() => {
     const title = watch('title');
