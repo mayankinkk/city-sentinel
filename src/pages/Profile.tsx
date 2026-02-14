@@ -127,8 +127,6 @@ export default function Profile() {
                 <Activity className="h-4 w-4" />
                 <span className="hidden sm:inline">Activity</span>
               </TabsTrigger>
-                <span className="hidden sm:inline">Language</span>
-              </TabsTrigger>
             </TabsList>
 
             {/* Profile Tab */}
