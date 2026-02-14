@@ -237,6 +237,9 @@ export function IssueForm() {
             )}
           </div>
 
+          {/* Duplicate Warning */}
+          <DuplicateWarning nearbyIssues={nearbyIssues} isChecking={isChecking} />
+
           {/* Issue Type */}
           <div className="space-y-2">
             <Label htmlFor="issue_type">Issue Type</Label>
