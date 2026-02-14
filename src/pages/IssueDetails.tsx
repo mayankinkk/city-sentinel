@@ -18,6 +18,7 @@ import { VerificationHistory } from '@/components/issues/VerificationHistory';
 import { ImageGallery } from '@/components/issues/ImageGallery';
 import { StatusTimeline } from '@/components/issues/StatusTimeline';
 import { SocialShare } from '@/components/issues/SocialShare';
+import { AssignIssue } from '@/components/issues/AssignIssue';
 import { IssueDetailsSkeleton } from '@/components/ui/skeleton-loaders';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
