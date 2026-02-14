@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -18,6 +18,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { stripExifData } from '@/lib/imageUtils';
 import { toast } from 'sonner';
+import { useDuplicateDetection } from '@/hooks/useDuplicateDetection';
+import { DuplicateWarning } from '@/components/issues/DuplicateWarning';
 
 const issueSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(100, 'Title must be less than 100 characters'),
@@ -41,6 +43,7 @@ export function IssueForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const { nearbyIssues, isChecking, checkDuplicates } = useDuplicateDetection();
 
   const {
     register,
@@ -105,11 +108,24 @@ export function IssueForm() {
   const handleLocationChange = (lat: number, lng: number) => {
     setLatitude(lat);
     setLongitude(lng);
+    // Trigger duplicate check when location changes
+    const title = watch('title');
+    if (title && title.length > 3) {
+      checkDuplicates(lat, lng, title);
+    }
   };
 
   const handleAddressChange = (newAddress: string) => {
     setAddress(newAddress);
   };
+
+  // Check duplicates when title changes significantly
+  const handleTitleBlur = useCallback(() => {
+    const title = watch('title');
+    if (latitude && longitude && title && title.length > 3) {
+      checkDuplicates(latitude, longitude, title);
+    }
+  }, [latitude, longitude, watch, checkDuplicates]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -221,6 +237,9 @@ export function IssueForm() {
             )}
           </div>
 
+          {/* Duplicate Warning */}
+          <DuplicateWarning nearbyIssues={nearbyIssues} isChecking={isChecking} />
+
           {/* Issue Type */}
           <div className="space-y-2">
             <Label htmlFor="issue_type">Issue Type</Label>
@@ -251,6 +270,7 @@ export function IssueForm() {
               id="title"
               placeholder="Brief description of the issue"
               {...register('title')}
+              onBlur={handleTitleBlur}
             />
             {errors.title && (
               <p className="text-sm text-destructive">{errors.title.message}</p>

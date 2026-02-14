@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { IssueCard } from '@/components/issues/IssueCard';
-import { Loader2, User, Bell, History, Heart, Save, Languages } from 'lucide-react';
+import { Loader2, User, Bell, History, Heart, Save, Languages, Activity } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { ActivityFeed } from '@/components/profile/ActivityFeed';
 import { Helmet } from 'react-helmet-async';
 import { format } from 'date-fns';
 
@@ -101,7 +102,7 @@ export default function Profile() {
           </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
               <TabsTrigger value="profile" className="gap-2">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Profile</span>
@@ -121,6 +122,10 @@ export default function Profile() {
               <TabsTrigger value="language" className="gap-2">
                 <Languages className="h-4 w-4" />
                 <span className="hidden sm:inline">Language</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-2">
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Activity</span>
               </TabsTrigger>
             </TabsList>
 
@@ -314,6 +319,11 @@ export default function Profile() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Activity Tab */}
+            <TabsContent value="activity">
+              <ActivityFeed />
             </TabsContent>
           </Tabs>
         </div>

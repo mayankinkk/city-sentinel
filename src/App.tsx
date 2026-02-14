@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useRealtimeIssues } from "@/hooks/useRealtimeIssues";
 import { Navbar } from "@/components/layout/Navbar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -22,16 +23,22 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function RealtimeProvider({ children }: { children: React.ReactNode }) {
+  useRealtimeIssues();
+  return <>{children}</>;
+}
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="min-h-screen bg-background">
-              <Navbar />
+        <RealtimeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="min-h-screen bg-background">
+                <Navbar />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -47,9 +54,10 @@ const App = () => (
                 <Route path="/admin/users" element={<UserManagement />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </RealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </HelmetProvider>
