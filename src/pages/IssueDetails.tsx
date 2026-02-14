@@ -596,6 +596,15 @@ export default function IssueDetails() {
               </Card>
             )}
 
+            {/* Issue Assignment */}
+            {userRoles.canUpdateStatus && (
+              <AssignIssue 
+                issueId={issue.id} 
+                issueTitle={issue.title}
+                currentAssignee={issue.assigned_to}
+              />
+            )}
+
             {/* Authority Actions - Status Update */}
             {userRoles.canUpdateStatus && (
               <Card className="border-green-500/20">
