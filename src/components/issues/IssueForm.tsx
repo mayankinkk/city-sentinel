@@ -360,15 +360,31 @@ export function IssueForm() {
           </div>
 
           {/* Terms and Conditions */}
-          <div className="flex items-start gap-3 p-4 border rounded-lg bg-muted/30">
-            <Checkbox
-              id="terms"
-              checked={termsAccepted}
-              onCheckedChange={(checked) => setTermsAccepted(!!checked)}
-            />
-            <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-              I agree to the Terms and Conditions. I confirm that the information provided is accurate and I understand that false reports may result in account suspension.
-            </Label>
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="terms"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+              />
+              <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+                I agree to the Terms and Conditions below. I confirm that the information provided is accurate.
+              </Label>
+            </div>
+
+            <div className="text-xs text-muted-foreground space-y-2 border-t pt-3">
+              <h4 className="font-semibold text-foreground text-sm">Terms & Conditions</h4>
+              <ol className="list-decimal list-inside space-y-1.5">
+                <li><strong>Accuracy:</strong> All information submitted must be truthful and accurate to the best of your knowledge.</li>
+                <li><strong>No False Reports:</strong> Submitting false, misleading, or spam reports may result in immediate account suspension or permanent ban.</li>
+                <li><strong>Privacy:</strong> GPS and device metadata are automatically stripped from uploaded images. Your location data is used solely for issue mapping.</li>
+                <li><strong>Content Ownership:</strong> By uploading photos, you grant City Sentinel a non-exclusive license to use them for issue resolution and public display.</li>
+                <li><strong>No Guarantees:</strong> Reporting an issue does not guarantee resolution within a specific timeframe. Resolution depends on municipal authorities.</li>
+                <li><strong>Respectful Use:</strong> Offensive, abusive, or inappropriate content in reports or comments will be removed and may lead to account action.</li>
+                <li><strong>Data Retention:</strong> Reports and associated data are retained for public transparency and may be anonymized for analytics.</li>
+              </ol>
+              <p className="pt-1 text-muted-foreground/80">By submitting, you acknowledge that you have read and agree to these terms.</p>
+            </div>
           </div>
 
           {/* Submit Button */}
