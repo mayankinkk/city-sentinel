@@ -178,19 +178,12 @@ export default function Index() {
         </section>
 
         {/* Terms & Conditions Footer */}
-        <footer className="py-12 border-t border-border bg-muted/20">
-          <div className="container mx-auto px-4 max-w-4xl">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Terms & Conditions</h3>
-            <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
-              <li><strong className="text-foreground/80">Accuracy:</strong> All information submitted must be truthful and accurate to the best of your knowledge.</li>
-              <li><strong className="text-foreground/80">No False Reports:</strong> Submitting false, misleading, or spam reports may result in immediate account suspension or permanent ban.</li>
-              <li><strong className="text-foreground/80">Privacy:</strong> GPS and device metadata are automatically stripped from uploaded images. Your location data is used solely for issue mapping.</li>
-              <li><strong className="text-foreground/80">Content Ownership:</strong> By uploading photos, you grant City Sentinel a non-exclusive license to use them for issue resolution and public display.</li>
-              <li><strong className="text-foreground/80">No Guarantees:</strong> Reporting an issue does not guarantee resolution within a specific timeframe. Resolution depends on municipal authorities.</li>
-              <li><strong className="text-foreground/80">Respectful Use:</strong> Offensive, abusive, or inappropriate content in reports or comments will be removed and may lead to account action.</li>
-              <li><strong className="text-foreground/80">Data Retention:</strong> Reports and associated data are retained for public transparency and may be anonymized for analytics.</li>
-            </ol>
-            <p className="text-xs text-muted-foreground/60 mt-6">© {new Date().getFullYear()} City Sentinel. All rights reserved.</p>
+        <footer className="py-6 border-t border-border bg-muted/20">
+          <div className="container mx-auto px-4 max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground/60">© {new Date().getFullYear()} City Sentinel. All rights reserved.</p>
+            <Link to="/terms" className="text-sm text-primary hover:underline">
+              Terms & Conditions
+            </Link>
           </div>
         </footer>
       </div>
